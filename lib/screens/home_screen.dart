@@ -145,12 +145,12 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Search bar
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // Search bar
                   Expanded(
                     flex: 4,
                     child: TextField(
@@ -168,6 +168,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+
+                  // Add note button
                   Expanded(
                     flex: 1,
                     child: InkWell(
