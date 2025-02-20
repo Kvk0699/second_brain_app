@@ -1,43 +1,60 @@
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:openai_api/openai_api.dart';
+import 'constants.dart';
 
-// Replace this with your actual Hugging Face Inference Token
-const String hfApiKey = "";
-const String baseUrl = 'https://api-inference.huggingface.co/v1/';
+class OpenAIClient {
+  late final OpenaiClient client;
 
+  // Singleton pattern
+  static final OpenAIClient _instance = OpenAIClient._internal();
+
+  factory OpenAIClient() {
+    return _instance;
+  }
+
+  OpenAIClient._internal() {
+    client = OpenaiClient(
+      config: OpenaiConfig(
+        apiKey: APIConstants.HF_API_KEY,
+        baseUrl: APIConstants.BASE_URL,
+      ),
+    );
+  }
+
+  Future<String> complete(String prompt) async {
+    try {
+      // final response = await client.completions.create(
+      //   model: 'Qwen/Qwen2.5-72B-Instruct',
+      //   messages: [
+      //     ChatMessage(
+      //       role: ChatMessageRole.user,
+      //       content: prompt,
+      //     ),
+      //   ],
+      //   temperature: APIConstants.DEFAULT_TEMPERATURE,
+      //   maxTokens: APIConstants.DEFAULT_MAX_TOKENS,
+      //   topP: APIConstants.DEFAULT_TOP_P,
+      // );
+
+      // return response.choices.first.message.content;
+      return 'Hello';
+    } catch (e) {
+      print('Error during API call: $e');
+      rethrow;
+    }
+  }
+
+  void dispose() {
+    // Clean up if needed
+  }
+}
+
+// Usage example in LLMService
 class LLMService {
-  final http.Client _client = http.Client();
+  final OpenAIClient _openai = OpenAIClient();
 
   Future<String> getAnswerFromLLM(String prompt) async {
-    print("prompt: $prompt");
-    
     try {
-      final response = await _client.post(
-        Uri.parse('${baseUrl}chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $hfApiKey',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'model': 'Qwen/Qwen2.5-72B-Instruct',
-          'messages': [
-            {
-              'role': 'user',
-              'content': prompt,
-            },
-          ],
-          'temperature': 0.3,
-          'max_tokens': 1024,
-          'top_p': 0.7,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['choices']?[0]?['message']?['content'] ?? '';
-      } else {
-        throw Exception('Failed to get response: ${response.statusCode}');
-      }
+      return await _openai.complete(prompt);
     } catch (error) {
       print('LLM call error: $error');
       return "Sorry, I'm having trouble accessing the LLM at the moment.";
@@ -45,6 +62,6 @@ class LLMService {
   }
 
   void dispose() {
-    _client.close();
+    _openai.dispose();
   }
 }

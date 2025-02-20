@@ -1,407 +1,628 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
+import '../utils/enums.dart';
 import 'add_note_screen.dart';
-import '../utils/llm_service.dart';
+import '../widgets/add_event_widget.dart';
+import '../models/item_model.dart';
+import '../widgets/item_list_section.dart';
+import 'item_list_screen.dart';
+import '../controllers/home_controller.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Map<String, dynamic>> notes = [];
-  String searchQuery = '';
-  String question = '';
-  String answer = '';
-  bool isLoading = false;
   final TextEditingController searchController = TextEditingController();
   final TextEditingController questionController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    loadNotes();
+    _loadInitialData();
   }
 
-  Future<void> loadNotes() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedNotes = prefs.getString('notes');
-      if (savedNotes != null) {
-        setState(() {
-          notes = List<Map<String, dynamic>>.from(
-            json.decode(savedNotes) as List,
-          );
-        });
-      }
-    } catch (error) {
-      debugPrint('Error loading notes: $error');
-    }
-  }
-
-  List<Map<String, dynamic>> get filteredNotes {
-    return notes.where((note) {
-      final title = note['title'].toString().toLowerCase();
-      final content = note['content'].toString().toLowerCase();
-      final query = searchQuery.toLowerCase();
-      return title.contains(query) || content.contains(query);
-    }).toList();
-  }
-
-  String buildPromptWithNotes(
-      String userQuestion, List<Map<String, dynamic>> allNotes) {
-    final now = DateTime.now();
-    final currentDate = now.toLocal().toString().split(' ')[0];
-    final currentTime = TimeOfDay.fromDateTime(now).format(context);
-
-    if (allNotes.isEmpty) {
-      return '''
-        You are a friendly personal assistant managing the user's secure digital notebook.
-        Current Date: $currentDate
-        Current Time: $currentTime
-        
-        The user question is: "$userQuestion"
-        Since there are no notes available, respond with:
-        "I don't see any notes yet! 📝 Feel free to add some information and I'll be happy to help you recall it."
-      ''';
-    }
-
-    final notesContext = allNotes.asMap().entries.map((entry) {
-      final idx = entry.key;
-      final note = entry.value;
-      return '''
-        Note #${idx + 1}:
-        Title: "${note['title']}"
-        Content: "${note['content']}"
-      ''';
-    }).join('\n\n');
-
-    return '''
-      You are a friendly and secure personal assistant managing the user's digital notebook. 
-      This notebook contains sensitive personal information like passwords, account details, private notes, bill payment dates, and subscription details.
-      
-      Current Date: $currentDate
-      Current Time: $currentTime
-
-      Guidelines for your responses:
-        1. Be warm and personal, but brief and direct in your answers.
-        2. Use ONLY information found in the notes. For questions without relevant data in notes, say:
-           "I don't have any information about that in your notes yet! 📝"
-        3. When sharing sensitive information like passwords or account details:
-           - Only show the specific details that were asked for
-        4. Format numbers, dates, and account details in an easily readable way
-        5. Use appropriate emojis to make responses friendly (but don't overdo it)
-        6. Never invent or guess information not present in the notes
-        7. For questions about due dates or subscriptions:
-           - Compare with current date to indicate if something is upcoming, due soon, or overdue
-           - For upcoming payments or renewals, mention how many days are left
-
-      The user's secure notes:
-      $notesContext
-
-      The user question is: "$userQuestion"
-
-      Now provide a concise, direct answer following the guidelines above.
-    ''';
-  }
-
-  Future<void> handleAsk() async {
-    final trimmedQuestion = questionController.text.trim();
-    if (trimmedQuestion.isEmpty || isLoading) return;
-
-    setState(() {
-      isLoading = true;
+  void _loadInitialData() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HomeController>().loadNotes();
     });
-
-    try {
-      final prompt = buildPromptWithNotes(trimmedQuestion, notes);
-      final llmResponse = await LLMService().getAnswerFromLLM(prompt);
-
-      setState(() {
-        answer = llmResponse;
-        question = '';
-        questionController.clear();
-      });
-    } catch (error) {
-      setState(() {
-        answer = 'Something went wrong while fetching your answer.';
-      });
-      debugPrint('Error while asking LLM: $error');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Search bar
-                  Expanded(
-                    flex: 4,
-                    child: TextField(
-                      controller: searchController,
-                      onChanged: (value) => setState(() => searchQuery = value),
-                      decoration: InputDecoration(
-                        hintText: '🔎 Search notes...',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        contentPadding: const EdgeInsets.all(8),
-                      ),
-                    ),
-                  ),
-
-                  // Add note button
-                  Expanded(
-                    flex: 1,
-                    child: InkWell(
-                        onTap: () {
-                          showModalBottomSheet(
-                            context: context,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16)),
-                            ),
-                            builder: (context) => Container(
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(Icons.note_add_rounded,
-                                        color: Colors.blue),
-                                    title: const Text('Create New Note'),
-                                    onTap: () {
-                                      Navigator.pop(
-                                          context); // Close bottom sheet
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const AddNoteScreen(),
-                                        ),
-                                      ).then((_) => loadNotes());
-                                    },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.password_rounded,
-                                        color: Colors.blue),
-                                    title: const Text('Add New Password'),
-                                    onTap: () {
-                                      Navigator.pop(
-                                          context); // Close bottom sheet
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const AddNoteScreen(
-                                            isPasswordNote: true,
-                                          ),
-                                        ),
-                                      ).then((_) => loadNotes());
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                        child: Icon(
-                          Icons.add_box_rounded,
-                          size: 48,
-                          color: Colors.blue,
-                        )),
-                  ),
-                ],
-              ),
-            ),
-
-            // Notes grid
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.8,
-                ),
-                itemCount: filteredNotes.length,
-                itemBuilder: (context, index) {
-                  final note = filteredNotes[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AddNoteScreen(note: note),
-                        ),
-                      ).then((_) => loadNotes());
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            note['title'] ?? 'Untitled',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          Expanded(
-                            child: Text(
-                              note['content'] ?? 'No content',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Text(
-                            DateTime.parse(note['timestamp'])
-                                .toLocal()
-                                .toString()
-                                .split(' ')[0],
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Ask section at bottom
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    offset: const Offset(0, -2),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  if (answer.isNotEmpty)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Stack(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 30),
-                            child: Text(answer),
-                          ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: IconButton(
-                              icon: Icon(Icons.close_rounded,
-                                  color: Colors.grey.shade600),
-                              onPressed: () => setState(() => answer = ''),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (isLoading)
-                    Container(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(width: 16),
-                          Text(
-                            '🤔 Thinking...',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: questionController,
-                          decoration: InputDecoration(
-                            hintText: '🤖 Ask your second brain...',
-                            filled: true,
-                            fillColor: Colors.grey.shade100,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                          ),
-                          onSubmitted: (_) => handleAsk(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.blue,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: IconButton(
-                          onPressed: handleAsk,
-                          icon: const Icon(Icons.send_rounded,
-                              color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+    return Consumer<HomeController>(
+      builder: (context, controller, _) => Scaffold(
+        appBar: _buildAppBar(context, controller),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildSearchSection(controller),
+              _buildListsSection(controller),
+              _buildAskSection(controller),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  PreferredSizeWidget _buildAppBar(
+      BuildContext context, HomeController controller) {
+    return AppBar(
+      title: Text(
+        'Second Brain',
+        style: Theme.of(context).textTheme.headlineLarge,
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          onPressed: () => _showSettingsMenu(context, controller),
+        ),
+      ],
+    );
+  }
+
+  void _showSettingsMenu(BuildContext context, HomeController controller) {
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        MediaQuery.of(context).size.width - 100,
+        100,
+        0,
+        0,
+      ),
+      items: [
+        PopupMenuItem(
+          child: Row(
+            children: [
+              Icon(
+                Icons.brightness_6_outlined,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Dark Mode',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ],
+          ),
+          onTap: controller.toggleTheme,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchSection(HomeController controller) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: 'Search notes...',
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+              onChanged: controller.updateSearchQuery,
+            ),
+          ),
+          _buildAddButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddButton() {
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: IconButton(
+        icon: Icon(
+          Icons.add,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        onPressed: _showAddOptionsSheet,
+      ),
+    );
+  }
+
+  Widget _buildDashboardSection(HomeController controller) {
+    if (controller.upcomingEvents.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primaryContainer,
+            Theme.of(context).colorScheme.surfaceContainer,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.upcoming_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Upcoming Events',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...controller.upcomingEvents
+              .map((event) => _buildUpcomingEventTile(event as EventModel)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingEventTile(EventModel event) {
+    final now = DateTime.now();
+    final isToday = event.eventDateTime.day == now.day;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isToday
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.tertiaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isToday ? Icons.today : Icons.event,
+              color: isToday
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.tertiary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  event.description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                TimeOfDay.fromDateTime(event.eventDateTime).format(context),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+              Text(
+                isToday ? 'Today' : 'Tomorrow',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListsSection(HomeController controller) {
+    return Expanded(
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          _buildDashboardSection(controller),
+          if (controller.passwordsList.isNotEmpty)
+            _buildPasswordSection(controller),
+          if (controller.notesList.isNotEmpty) _buildNotesSection(controller),
+          if (controller.eventsList.isNotEmpty) _buildEventsSection(controller),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordSection(HomeController controller) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        tileColor: Theme.of(context).colorScheme.tertiary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        title: Text(
+          'Passwords',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.surface,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        trailing: Icon(
+          Icons.visibility_off_rounded,
+          color: Theme.of(context).colorScheme.surface,
+        ),
+        onTap: () => _navigateToPasswordList(context, controller),
+      ),
+    );
+  }
+
+  Widget _buildNotesSection(HomeController controller) {
+    return ItemListSection(
+      title: 'Notes',
+      items: controller.notesList,
+      onItemTap: (note) => _handleNoteItemTap(note: note as NoteModel),
+    );
+  }
+
+  Widget _buildEventsSection(HomeController controller) {
+    return ItemListSection(
+      title: 'Events',
+      items: controller.eventsList,
+      onItemTap: (note) {
+        if (note is EventModel) {
+          _showEventBottomSheet(context, eventNote: note);
+        }
+      },
+    );
+  }
+
+  Widget _buildAskSection(HomeController controller) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
+            offset: const Offset(0, -2),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          if (controller.answer.isNotEmpty) _buildAnswerBox(controller),
+          if (controller.isLoading) _buildLoadingIndicator(),
+          _buildQuestionInput(controller),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnswerBox(HomeController controller) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 30),
+            child: Text(controller.answer),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: IconButton(
+              icon: Icon(Icons.close_rounded, color: Colors.grey.shade600),
+              onPressed: () => setState(() => controller.clearAnswer()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Container(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(width: 16),
+          Text(
+            '🤔 Thinking...',
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionInput(HomeController controller) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: questionController,
+            decoration: InputDecoration(
+              hintText: '🤖 Ask your second brain...',
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surfaceContainer,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+            onSubmitted: (_) => handleAsk(context),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.tertiary,
+                Theme.of(context).colorScheme.primary
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: IconButton(
+            onPressed: () => handleAsk(context),
+            icon: const Icon(Icons.send_rounded, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _handleAddOption(AddOption option) {
+    switch (option) {
+      case AddOption.note:
+        _handleNoteItemTap();
+        break;
+      case AddOption.password:
+        _showPasswordBottomSheet();
+        break;
+
+      case AddOption.event:
+        _showEventBottomSheet(context);
+        break;
+    }
+  }
+
+  void _showPasswordBottomSheet({PasswordModel? passwordNote}) {
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: AddNoteScreen(
+            note: passwordNote,
+            isPasswordNote: true,
+          ),
+        ),
+      ),
+    ).then((result) {
+      if (result == true && mounted) {
+        context.read<HomeController>().loadNotes();
+      }
+    });
+  }
+
+  void _showAddOptionsSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: AddOption.values
+              .map((option) => ListTile(
+                    leading: Icon(
+                      option.icon,
+                      color: Theme.of(context).colorScheme.tertiary,
+                    ),
+                    title: Text(
+                      option.name,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.tertiary),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _handleAddOption(
+                        option,
+                      );
+                    },
+                  ))
+              .toList(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> handleAsk(BuildContext context) async {
+    final trimmedQuestion = questionController.text.trim();
+    if (trimmedQuestion.isEmpty || context.read<HomeController>().isLoading)
+      return;
+
+    context.read<HomeController>().handleAsk(trimmedQuestion, context);
+  }
+
+  void _navigateToPasswordList(
+      BuildContext context, HomeController controller) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ItemListScreen(
+          title: 'Passwords',
+          items: controller.passwordsList,
+          onItemTap: (note) {
+            if (note is PasswordModel) {
+              _showPasswordBottomSheet(passwordNote: note);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  void _handleNoteItemTap({NoteModel? note}) {
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.8,
+          child: AddNoteScreen(
+            note: note,
+          ),
+        ),
+      ),
+    ).then((result) {
+      if (result == true && mounted) {
+        context.read<HomeController>().loadNotes();
+      }
+    });
+  }
+
+  void _showEventBottomSheet(BuildContext context, {EventModel? eventNote}) {
+    showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: AddEventWidget(
+          eventNote: eventNote,
+        ),
+      ),
+    ).then((eventData) {
+      if (eventData != null) {
+        // Handle delete action
+        if (eventData['delete'] == true && eventData['id'] != null) {
+          context
+              .read<HomeController>()
+              .deleteItem(eventData['id'])
+              .then((_) => context.read<HomeController>().loadNotes());
+          return;
+        }
+
+        // Handle create/update action
+        final now = DateTime.now();
+        final event = EventModel(
+          id: eventData['id'] ?? now.millisecondsSinceEpoch.toString(),
+          title: eventData['title'],
+          description: eventData['description'] ?? '',
+          eventDateTime: DateTime.parse(eventData['datetime']),
+          createdAt: eventNote?.createdAt ?? DateTime.now(),
+          updatedAt: now,
+        );
+
+        if (eventData['id'] != null) {
+          context
+              .read<HomeController>()
+              .updateItem(event)
+              .then((_) => context.read<HomeController>().loadNotes());
+        } else {
+          context
+              .read<HomeController>()
+              .addItem(event)
+              .then((_) => context.read<HomeController>().loadNotes());
+        }
+      }
+    });
   }
 }

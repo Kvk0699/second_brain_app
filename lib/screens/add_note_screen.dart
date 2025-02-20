@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../models/item_model.dart';
+import '../services/storage_service.dart';
 import 'dart:async';
+import '../widgets/delete_confirmation_dialog.dart';
 
 class AddNoteScreen extends StatefulWidget {
-  final Map<String, dynamic>? note;
+  final ItemModel? note;
   final bool isPasswordNote;
 
   const AddNoteScreen({
@@ -18,103 +19,120 @@ class AddNoteScreen extends StatefulWidget {
 }
 
 class _AddNoteScreenState extends State<AddNoteScreen> {
+  final StorageService _storage = StorageService();
   late String id;
   final TextEditingController titleController = TextEditingController();
   final TextEditingController contentController = TextEditingController();
-  Timer? _autoSaveTimer;
+  final TextEditingController usernameController =
+      TextEditingController(); // For password notes
   bool _obscureContent = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    id = widget.note?['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
-    titleController.text = widget.note?['title'] ?? '';
-    contentController.text = widget.note?['content'] ?? '';
+    id = widget.note?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+    titleController.text = widget.note?.title ?? '';
+    contentController.text = widget.note?.content ?? '';
+    if (widget.isPasswordNote && widget.note is PasswordModel) {
+      usernameController.text = (widget.note as PasswordModel).username;
+    }
     _obscureContent = widget.isPasswordNote;
-
-    // Setup auto-save listeners
-    titleController.addListener(_startAutoSave);
-    contentController.addListener(_startAutoSave);
   }
 
   @override
   void dispose() {
-    _autoSaveTimer?.cancel();
     titleController.dispose();
     contentController.dispose();
+    usernameController.dispose();
     super.dispose();
   }
 
-  void _startAutoSave() {
-    _autoSaveTimer?.cancel();
-    _autoSaveTimer = Timer(const Duration(milliseconds: 500), _autoSaveNote);
-  }
-
-  Future<void> _autoSaveNote() async {
+  Future<void> _saveNote() async {
     if (titleController.text.trim().isEmpty &&
-        contentController.text.trim().isEmpty) return;
+        contentController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter title or content')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final notesJson = prefs.getString('notes') ?? '[]';
-      final notes = List<Map<String, dynamic>>.from(
-        json.decode(notesJson) as List,
-      );
+      final now = DateTime.now();
+      final ItemModel newNote = widget.isPasswordNote
+          ? PasswordModel(
+              id: id,
+              accountName: titleController.text.trim(),
+              username: usernameController.text.trim(),
+              password: contentController.text.trim(),
+              createdAt: widget.note?.createdAt ?? now,
+              updatedAt: now,
+              isSecure: true,
+            )
+          : NoteModel(
+              id: id,
+              title: titleController.text.trim(),
+              content: contentController.text.trim(),
+              createdAt: widget.note?.createdAt ?? now,
+              updatedAt: now,
+            );
 
-      final newNote = {
-        'id': id,
-        'title': titleController.text.trim(),
-        'content': contentController.text.trim(),
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-
-      final index = notes.indexWhere((note) => note['id'] == id);
-      if (index > -1) {
-        notes[index] = newNote;
+      if (widget.note != null) {
+        await _storage.updateItem(newNote);
       } else {
-        notes.insert(0, newNote);
+        await _storage.addItem(newNote);
       }
 
-      await prefs.setString('notes', json.encode(notes));
+      if (mounted) {
+        Navigator.pop(context, true); // Return true to indicate successful save
+      }
     } catch (error) {
-      debugPrint('Error auto-saving note: $error');
+      debugPrint('Error saving note: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error saving note')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
   Future<void> _deleteNote() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final notesJson = prefs.getString('notes') ?? '[]';
-      final notes = List<Map<String, dynamic>>.from(
-        json.decode(notesJson) as List,
-      );
-
-      notes.removeWhere((note) => note['id'] == id);
-      await prefs.setString('notes', json.encode(notes));
-      Navigator.pop(context);
+      await _storage.deleteItem(id);
+      if (mounted) {
+        Navigator.pop(
+            context, true); // Return true to indicate successful deletion
+      }
     } catch (error) {
       debugPrint('Error deleting note: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error deleting note')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.blue),
+          icon: const Icon(Icons.close, color: Colors.grey),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.isPasswordNote ? 'Password Note' : 'Note',
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                color: Theme.of(context).colorScheme.secondary,
+              ),
         ),
         actions: [
           if (widget.isPasswordNote)
@@ -132,24 +150,10 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
               onPressed: () {
                 showDialog(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Delete Note'),
-                    content: const Text(
-                        'Are you sure you want to delete this note?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _deleteNote();
-                        },
-                        child: const Text('Delete',
-                            style: TextStyle(color: Colors.red)),
-                      ),
-                    ],
+                  builder: (context) => DeleteConfirmationDialog(
+                    title: 'Delete Note',
+                    message: 'Are you sure you want to delete this note?',
+                    onDelete: _deleteNote,
                   ),
                 );
               },
@@ -173,17 +177,44 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                             ? '🔑 Account Name'
                             : '✏️ Title',
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                         counterText: '',
+                        filled: true,
+                        fillColor: Colors.transparent,
                         hintStyle: TextStyle(
-                          color: Colors.grey.shade400,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withOpacity(0.7),
                           fontSize: 20,
                         ),
                       ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
+                    if (widget.isPasswordNote)
+                      TextField(
+                        controller: usernameController,
+                        decoration: InputDecoration(
+                          hintText: '👤 Username',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: true,
+                          fillColor: Colors.transparent,
+                          hintStyle: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withOpacity(0.7),
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
                     const Divider(height: 1),
                     TextField(
                       controller: contentController,
@@ -192,32 +223,75 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                       textCapitalization: TextCapitalization.sentences,
                       decoration: InputDecoration(
                         hintText: widget.isPasswordNote
-                            ? 'Enter password and other details...'
+                            ? 'Enter password'
                             : 'Start writing your thoughts here...',
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: true,
+                        fillColor: Colors.transparent,
                         hintStyle: TextStyle(
-                          color: Colors.grey.shade400,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withOpacity(0.7),
                           fontSize: 16,
                         ),
                       ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         height: 1.5,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            // Auto-save indicator
+            // Save and Cancel buttons
             Container(
-              padding: const EdgeInsets.all(8),
-              child: Text(
-                'Auto-saving...',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 12,
-                ),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        Theme.of(context).colorScheme.surface.withOpacity(0.05),
+                    offset: const Offset(0, -2),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: _isSaving ? null : () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: _isSaving ? null : _saveNote,
+                    // style: ElevatedButton.styleFrom(
+                    //   backgroundColor: Colors.blue,
+                    //   foregroundColor: Colors.white,
+                    //   padding: const EdgeInsets.symmetric(
+                    //     horizontal: 24,
+                    //     vertical: 12,
+                    //   ),
+                    // ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(widget.note != null ? 'Update' : 'Save'),
+                  ),
+                ],
               ),
             ),
           ],
