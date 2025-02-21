@@ -32,7 +32,6 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.2.2
   http: ^1.1.0
-  openai_api: ^0.3.7
   google_fonts: ^6.1.0
   provider: ^6.1.1
 
