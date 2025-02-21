@@ -17,6 +17,7 @@ class HomeController extends ChangeNotifier {
 
   HomeController() {
     _loadThemePreference();
+    _initializeDummyData();
   }
 
   ThemeMode get themeMode => _themeMode;
@@ -137,12 +138,12 @@ class HomeController extends ChangeNotifier {
   }
 
   String buildPromptWithNotes(
-      String userQuestion, List<ItemModel> allNotes, BuildContext context) {
+      String userQuestion, List<ItemModel> allItems, BuildContext context) {
     final now = DateTime.now();
     final currentDate = now.toLocal().toString().split(' ')[0];
     final currentTime = TimeOfDay.fromDateTime(now).format(context);
 
-    if (allNotes.isEmpty) {
+    if (allItems.isEmpty) {
       return '''
         You are a friendly personal assistant managing the user's secure digital notebook.
         Current Date: $currentDate
@@ -154,42 +155,169 @@ class HomeController extends ChangeNotifier {
       ''';
     }
 
-    // TODO: Implement full prompt building logic
-    final notesContext = allNotes.asMap().entries.map((entry) => '''
-        Note #${entry.key + 1}:
-        Title: "${entry.value.title}"
-        Content: "${entry.value.content}"
+    // Separate items by type for better context organization
+    final notes = allItems.whereType<NoteModel>().toList();
+    final passwords = allItems.whereType<PasswordModel>().toList();
+    final events = allItems.whereType<EventModel>().toList();
+
+    // Build context for notes
+    final notesContext = notes.isEmpty
+        ? "No notes stored."
+        : notes.asMap().entries.map((entry) => '''
+          Note #${entry.key + 1}:
+          Title: "${entry.value.title}"
+          Content: "${entry.value.content}"
+          Last Updated: ${entry.value.updatedAt.toLocal().toString().split('.')[0]}
+        ''').join('\n\n');
+
+    // Build context for passwords
+    final passwordsContext = passwords.isEmpty
+        ? "No passwords stored."
+        : passwords.asMap().entries.map((entry) => '''
+        Password #${entry.key + 1}:
+        Account: "${entry.value.accountName}"
+        Username: "${entry.value.username}"
+        Password: "${entry.value.content}"
+        Last Updated: ${entry.value.updatedAt.toLocal().toString().split('.')[0]}
       ''').join('\n\n');
+
+    // Build context for events with calculated time remaining
+    final eventsContext = events.isEmpty
+        ? "No events stored."
+        : events.asMap().entries.map((entry) {
+            final event = entry.value;
+            final daysRemaining = event.eventDateTime.difference(now).inDays;
+            final hoursRemaining =
+                event.eventDateTime.difference(now).inHours % 24;
+            String timeStatus;
+
+            if (event.eventDateTime.isBefore(now)) {
+              timeStatus = "Past event (${-daysRemaining} days ago)";
+            } else if (daysRemaining == 0) {
+              timeStatus = "Today (in ${hoursRemaining} hours)";
+            } else if (daysRemaining == 1) {
+              timeStatus = "Tomorrow (in ${daysRemaining} day)";
+            } else {
+              timeStatus = "Upcoming (in ${daysRemaining} days)";
+            }
+
+            return '''
+              Event #${entry.key + 1}:
+              Title: "${event.title}"
+              Description: "${event.description}"
+              Date: ${event.eventDateTime.toLocal().toString().split('.')[0]}
+              Status: $timeStatus
+            ''';
+          }).join('\n\n');
 
     return '''
       You are a friendly and secure personal assistant managing the user's digital notebook. 
-      This notebook contains sensitive personal information like passwords, account details, private notes, bill payment dates, and subscription details.
+      This notebook contains sensitive personal information including notes, password details, and scheduled events.
       
-      Current Date: ${currentDate}
-      Current Time: ${currentTime}
+      Current Date: $currentDate
+      Current Time: $currentTime
 
       Guidelines for your responses:
         1. Be warm and personal, but brief and direct in your answers.
-        2. Use ONLY information found in the notes. For questions without relevant data in notes, say:
+        2. Use ONLY information found in the user's data. For questions without relevant data, say:
           "I don't have any information about that in your notes yet! 📝"
-        3. When sharing sensitive information like passwords or account details:
+        3. When sharing sensitive information like passwords:
           - Only show the specific details that were asked for
-        4. Format numbers, dates, and account details in an easily readable way
-        5. Use appropriate emojis to make responses friendly (but don't overdo it)
-        6. Never invent or guess information not present in the notes
-        7. For questions about due dates or subscriptions:
-          - Compare with current date to indicate if something is upcoming, due soon, or overdue
-          - For upcoming payments or renewals, mention how many days are left
+          - Confirm that you're sharing sensitive information
+        4. Format dates, times, and account details in an easily readable way
+        5. Never invent or guess information not present in the stored data
+        6. For questions about events:
+          - Indicate whether events are upcoming, happening today, or in the past
+          - For upcoming events, mention how many days are left
+        7. For searches across multiple types of data, prioritize the most relevant information first
 
-      The user's secure notes:
+      STORED NOTES:
       $notesContext
 
-      The user question is: "${userQuestion}"
+      STORED PASSWORDS:
+      $passwordsContext
 
-      Now provide a concise, direct answer following the guidelines above.''';
+      STORED EVENTS:
+      $eventsContext
+
+      The user question is: "$userQuestion"
+
+      Now provide a concise, direct answer using only the information available above. Use Markdown formatting for clarity.
+  ''';
   }
 
   Future<void> initializeTheme() async {
     await _loadThemePreference();
+  }
+
+  Future<void> _initializeDummyData() async {
+    // Create dummy items
+    final dummyItems = [
+      // Two Note Models
+      NoteModel(
+        id: '1',
+        title: 'Meeting Notes',
+        content: 'Discuss project timeline and resource allocation for Q2.',
+        createdAt: DateTime.now().subtract(const Duration(days: 5)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+      NoteModel(
+        id: '2',
+        title: 'Shopping List',
+        content: 'Milk, eggs, bread, fruits, vegetables, and coffee beans.',
+        createdAt: DateTime.now().subtract(const Duration(days: 3)),
+        updatedAt: DateTime.now(),
+      ),
+
+      // Two Password Models
+      PasswordModel(
+        id: '3',
+        accountName: 'Gmail Account',
+        username: 'user@gmail.com',
+        password: 'securePass2024!',
+        createdAt: DateTime.now().subtract(const Duration(days: 30)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 15)),
+      ),
+      PasswordModel(
+        id: '4',
+        accountName: 'Netflix',
+        username: 'user.netflix',
+        password: 'streamingPass#123',
+        createdAt: DateTime.now().subtract(const Duration(days: 60)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 10)),
+      ),
+
+      // Two Event Models
+      EventModel(
+        id: '5',
+        title: 'Team Meeting',
+        description: 'Quarterly review with the development team.',
+        eventDateTime: DateTime.now().add(const Duration(days: 3)),
+        createdAt: DateTime.now().subtract(const Duration(days: 14)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 2)),
+      ),
+      EventModel(
+        id: '6',
+        title: 'Dentist Appointment',
+        description: 'Regular check-up at Downtown Dental Clinic.',
+        eventDateTime: DateTime.now().add(const Duration(days: 7)),
+        createdAt: DateTime.now().subtract(const Duration(days: 10)),
+        updatedAt: DateTime.now(),
+      ),
+    ];
+
+    // Check if any items already exist
+    final existingItems = await _storage.getAllItems();
+
+    // Only initialize with dummy data if the storage is empty
+    if (existingItems.isEmpty) {
+      // Add each item to storage
+      for (final item in dummyItems) {
+        await _storage.addItem(item);
+      }
+
+      // Load the items from storage
+      await loadNotes();
+    }
   }
 }
