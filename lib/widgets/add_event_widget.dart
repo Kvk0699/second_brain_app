@@ -203,15 +203,14 @@ class _AddEventWidgetState extends State<AddEventWidget> {
               ElevatedButton(
                 onPressed: () {
                   if (_titleController.text.isNotEmpty &&
-                      _selectedDate != null &&
-                      _selectedTime != null) {
+                      _selectedDate != null) {
                     // Combine date and time
                     final DateTime eventDateTime = DateTime(
                       _selectedDate!.year,
                       _selectedDate!.month,
                       _selectedDate!.day,
-                      _selectedTime!.hour,
-                      _selectedTime!.minute,
+                      _selectedTime?.hour ?? 0,
+                      _selectedTime?.minute ?? 0,
                     );
 
                     // Return event data to the caller

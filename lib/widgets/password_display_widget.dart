@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/item_model.dart';
 
-class PasswordDisplayWidget extends StatelessWidget {
+class PasswordDisplayWidget extends StatefulWidget {
   final PasswordModel item;
   final Function(PasswordModel) onItemTap;
 
@@ -10,6 +10,17 @@ class PasswordDisplayWidget extends StatelessWidget {
     required this.item,
     required this.onItemTap,
   });
+
+  @override
+  State<PasswordDisplayWidget> createState() => _PasswordDisplayWidgetState();
+}
+
+class _PasswordDisplayWidgetState extends State<PasswordDisplayWidget> {
+  bool _showPassword = false;
+
+  String _maskPassword(String password) {
+    return '•' * password.length;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,32 +56,57 @@ class PasswordDisplayWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                "Account Name: ${item.accountName}",
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
+              Expanded(
+                child: Text(
+                  "Account Name: ${widget.item.accountName}",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.edit_outlined),
-                onPressed: () => onItemTap(item),
+                onPressed: () => widget.onItemTap(widget.item),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            "Username: ${item.username}",
+            "Username: ${widget.item.username}",
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
-          Text(
-            "Password: ${item.content}",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+          GestureDetector(
+            onTapDown: (_) => setState(() => _showPassword = true),
+            onTapUp: (_) => setState(() => _showPassword = false),
+            onTapCancel: () => setState(() => _showPassword = false),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    "Password: ${_showPassword ? widget.item.content : _maskPassword(widget.item.content)}",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontFamily: _showPassword ? null : 'monospace',
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                Icon(
+                  Icons.remove_red_eye_outlined,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -4,10 +4,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../utils/enums.dart';
+import '../widgets/note_display_widget.dart';
 import 'add_note_screen.dart';
 import '../widgets/add_event_widget.dart';
 import '../models/item_model.dart';
-import '../widgets/item_list_section.dart';
 import 'item_list_screen.dart';
 import '../controllers/home_controller.dart';
 
@@ -279,11 +279,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(
         shrinkWrap: true,
         children: [
-          _buildDashboardSection(controller),
+          // _buildDashboardSection(controller),
           if (controller.passwordsList.isNotEmpty)
             _buildPasswordSection(controller),
-          if (controller.notesList.isNotEmpty) _buildNotesSection(controller),
           if (controller.eventsList.isNotEmpty) _buildEventsSection(controller),
+          if (controller.notesList.isNotEmpty) _buildNotesSection(controller),
         ],
       ),
     );
@@ -315,22 +315,71 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNotesSection(HomeController controller) {
-    return ItemListSection(
-      title: 'Notes',
-      items: controller.notesList,
-      onItemTap: (note) => _handleNoteItemTap(note: note as NoteModel),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Text(
+            "Notes",
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          itemCount: controller.notesList.length,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemBuilder: (context, index) {
+            return NoteDisplayWidget(
+              item: controller.notesList[index] as NoteModel,
+              onItemTap: (note) {
+                _handleNoteItemTap(
+                    note: controller.notesList[index] as NoteModel);
+              },
+            );
+          },
+        )
+      ],
     );
   }
 
   Widget _buildEventsSection(HomeController controller) {
-    return ItemListSection(
-      title: 'Events',
-      items: controller.eventsList,
-      onItemTap: (note) {
-        if (note is EventModel) {
-          _showEventBottomSheet(context, eventNote: note);
-        }
-      },
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+          tileColor: Theme.of(context).colorScheme.tertiary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          title: Text(
+            'Events',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.surface,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          trailing: Icon(
+            Icons.arrow_right_outlined,
+            color: Theme.of(context).colorScheme.surface,
+          ),
+          onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ItemListScreen(
+                    title: "Events",
+                    items: controller.eventsList,
+                    onItemTap: (note) {
+                      if (note is EventModel) {
+                        _showEventBottomSheet(context, eventNote: note);
+                      }
+                    },
+                  ),
+                ),
+              )),
     );
   }
 

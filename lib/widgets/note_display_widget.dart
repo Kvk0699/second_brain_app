@@ -20,7 +20,7 @@ class NoteDisplayWidget extends StatelessWidget {
         width: MediaQuery.of(context).size.width * 0.5,
         height: MediaQuery.of(context).size.height * 0.15,
         margin: const EdgeInsets.all(4),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -66,7 +66,7 @@ class NoteDisplayWidget extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Expanded(
               child: Text(
                 item.content,

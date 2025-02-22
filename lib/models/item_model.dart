@@ -32,9 +32,12 @@ abstract class ItemModel {
 }
 
 class NoteModel extends ItemModel {
+  final String description;
+
   NoteModel({
     required String id,
     required String title,
+    required this.description,
     required String content,
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -50,6 +53,7 @@ class NoteModel extends ItemModel {
     return NoteModel(
       id: json['id'] as String,
       title: json['title'] as String,
+      description: json['description'] as String? ?? '',
       content: json['content'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -62,6 +66,7 @@ class NoteModel extends ItemModel {
       'type': 'note',
       'id': id,
       'title': title,
+      'description': description,
       'content': content,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),

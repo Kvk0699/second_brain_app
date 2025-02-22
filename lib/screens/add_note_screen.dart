@@ -25,6 +25,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   final TextEditingController contentController = TextEditingController();
   final TextEditingController usernameController =
       TextEditingController(); // For password notes
+  final TextEditingController descriptionController = TextEditingController();
   bool _obscureContent = false;
   bool _isSaving = false;
 
@@ -34,6 +35,9 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     id = widget.note?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
     titleController.text = widget.note?.title ?? '';
     contentController.text = widget.note?.content ?? '';
+    if (widget.note is NoteModel) {
+      descriptionController.text = (widget.note as NoteModel).description;
+    }
     if (widget.isPasswordNote && widget.note is PasswordModel) {
       usernameController.text = (widget.note as PasswordModel).username;
     }
@@ -45,6 +49,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     titleController.dispose();
     contentController.dispose();
     usernameController.dispose();
+    descriptionController.dispose();
     super.dispose();
   }
 
@@ -74,6 +79,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
           : NoteModel(
               id: id,
               title: titleController.text.trim(),
+              description: descriptionController.text.trim(),
               content: contentController.text.trim(),
               createdAt: widget.note?.createdAt ?? now,
               updatedAt: now,
@@ -168,32 +174,39 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    TextField(
-                      controller: titleController,
-                      maxLength: 100,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: widget.isPasswordNote
-                            ? '🔑 Account Name'
-                            : '✏️ Title',
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        counterText: '',
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        hintStyle: TextStyle(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withOpacity(0.7),
-                          fontSize: 20,
-                        ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface,
+                      child: TextField(
+                        controller: titleController,
+                        maxLength: 100,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(
+                          hintText: widget.isPasswordNote
+                              ? '🔑 Account Name'
+                              : '✏️ Title',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          counterText: '',
+                          filled: true,
+                          fillColor: Colors.transparent,
+                          contentPadding: const EdgeInsets.all(16),
+                          hintStyle: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withOpacity(0.7),
+                            fontSize: 20,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                     ),
                     if (widget.isPasswordNote)
@@ -216,34 +229,76 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                         ),
                       ),
                     const Divider(height: 1),
-                    TextField(
-                      controller: contentController,
-                      maxLines: widget.isPasswordNote ? 1 : null,
-                      obscureText: _obscureContent,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: widget.isPasswordNote
-                            ? 'Enter password'
-                            : 'Start writing your thoughts here...',
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        hintStyle: TextStyle(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withOpacity(0.7),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: TextField(
+                        controller: contentController,
+                        maxLines: widget.isPasswordNote ? 1 : null,
+                        obscureText: _obscureContent,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(
+                          hintText: widget.isPasswordNote
+                              ? 'Enter password'
+                              : 'Start writing your thoughts here...',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: true,
+                          fillColor: Colors.transparent,
+                          contentPadding: const EdgeInsets.all(16),
+                          hintStyle: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withOpacity(0.7),
+                            fontSize: 16,
+                          ),
+                        ),
+                        style: TextStyle(
                           fontSize: 16,
+                          height: 1.5,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
-                      style: TextStyle(
-                        fontSize: 16,
-                        height: 1.5,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
                     ),
+                    if (widget.isPasswordNote) const Divider(height: 1),
+                    if (widget.isPasswordNote)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: TextField(
+                          controller: descriptionController,
+                          maxLength: 200,
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: InputDecoration(
+                            hintText: '📝 Add a brief description...',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            counterText: '',
+                            filled: true,
+                            fillColor: Colors.transparent,
+                            contentPadding: const EdgeInsets.all(16),
+                            hintStyle: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withOpacity(0.7),
+                              fontSize: 16,
+                            ),
+                          ),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

@@ -259,14 +259,14 @@ class HomeController extends ChangeNotifier {
         title: 'Meeting Notes',
         content: 'Discuss project timeline and resource allocation for Q2.',
         createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 1)), description: '',
       ),
       NoteModel(
         id: '2',
         title: 'Shopping List',
         content: 'Milk, eggs, bread, fruits, vegetables, and coffee beans.',
         createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        updatedAt: DateTime.now(),
+        updatedAt: DateTime.now(), description: '',
       ),
 
       // Two Password Models
