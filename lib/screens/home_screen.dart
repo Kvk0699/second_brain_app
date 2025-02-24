@@ -46,9 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       isAuthorized = await _localAuthentication.authenticate(
         localizedReason: "Please authenticate to see your passwords",
-        useErrorDialogs: true,
-        stickyAuth: false,
-        biometricOnly: true,
+        options: const AuthenticationOptions(
+          useErrorDialogs: true,
+          stickyAuth: false,
+          biometricOnly: true,
+        ),
       );
     } on PlatformException catch (exception) {
       if (exception.code == local_auth_error.notAvailable ||
