@@ -1,7 +1,12 @@
+import 'package:app_settings/app_settings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:local_auth/error_codes.dart' as local_auth_error;
+import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'dart:io' show Platform;
 
 import '../utils/enums.dart';
 import '../widgets/note_display_widget.dart';
@@ -21,6 +26,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController searchController = TextEditingController();
   final TextEditingController questionController = TextEditingController();
+  final _localAuthentication = LocalAuthentication();
+  bool _isUserAuthorized = false;
 
   @override
   void initState() {
@@ -32,6 +39,78 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeController>().loadNotes();
     });
+  }
+
+  Future<void> authenticateUser(HomeController controller) async {
+    bool isAuthorized = false;
+    try {
+      isAuthorized = await _localAuthentication.authenticate(
+        localizedReason: "Please authenticate to see your passwords",
+        useErrorDialogs: true,
+        stickyAuth: false,
+        biometricOnly: true,
+      );
+    } on PlatformException catch (exception) {
+      if (exception.code == local_auth_error.notAvailable ||
+          exception.code == local_auth_error.passcodeNotSet ||
+          exception.code == local_auth_error.notEnrolled) {
+        // Show enhanced dialog with biometric enrollment option
+        final action = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Authentication Required'),
+              content: const Text(
+                  'Biometric authentication is not set up on this device. What would you like to do?'),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Go Back'),
+                  onPressed: () => Navigator.pop(context, 'back'),
+                ),
+                TextButton(
+                  child: const Text('Set Up Biometrics'),
+                  onPressed: () => Navigator.pop(context, 'setup'),
+                ),
+                FilledButton(
+                  child: const Text('Continue Anyway'),
+                  onPressed: () => Navigator.pop(context, 'continue'),
+                ),
+              ],
+            );
+          },
+        );
+
+        switch (action) {
+          case 'setup':
+            try {
+              AppSettings.openAppSettings(type: AppSettingsType.security);
+            } catch (e) {
+              debugPrint('Error opening settings: $e');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Could not open device settings'),
+                ),
+              );
+            }
+            break;
+          case 'continue':
+            _navigateToPasswordList(context, controller);
+            break;
+          case 'back':
+          default:
+            // Do nothing, dialog is dismissed
+            break;
+        }
+        return;
+      }
+    }
+
+    if (!mounted) return;
+
+    if (isAuthorized) {
+      _navigateToPasswordList(context, controller);
+    }
   }
 
   @override
@@ -110,6 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: TextField(
               controller: searchController,
+              textAlign: TextAlign.start,
               decoration: InputDecoration(
                 hintText: 'Search notes...',
                 prefixIcon: Icon(
@@ -309,7 +389,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Icons.visibility_off_rounded,
           color: Theme.of(context).colorScheme.surface,
         ),
-        onTap: () => _navigateToPasswordList(context, controller),
+        onTap: () {
+          authenticateUser(controller);
+        },
       ),
     );
   }
@@ -657,16 +739,11 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.6,
-          child: AddNoteScreen(
-            note: passwordNote,
-            isPasswordNote: true,
-          ),
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: AddNoteScreen(
+          note: passwordNote,
+          isPasswordNote: true,
         ),
       ),
     ).then((result) {
@@ -743,15 +820,10 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.8,
-          child: AddNoteScreen(
-            note: note,
-          ),
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: AddNoteScreen(
+          note: note,
         ),
       ),
     ).then((result) {

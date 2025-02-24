@@ -49,7 +49,10 @@ class HomeController extends ChangeNotifier {
     return items.where((item) {
       final title = item.title.toLowerCase();
       final content = item.content.toLowerCase();
-      return title.contains(query) || content.contains(query);
+      return title.contains(query) ||
+          content.contains(query) ||
+          item is EventModel ||
+          item is PasswordModel;
     }).toList();
   }
 
@@ -259,14 +262,16 @@ class HomeController extends ChangeNotifier {
         title: 'Meeting Notes',
         content: 'Discuss project timeline and resource allocation for Q2.',
         createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)), description: '',
+        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+        description: '',
       ),
       NoteModel(
         id: '2',
         title: 'Shopping List',
         content: 'Milk, eggs, bread, fruits, vegetables, and coffee beans.',
         createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        updatedAt: DateTime.now(), description: '',
+        updatedAt: DateTime.now(),
+        description: '',
       ),
 
       // Two Password Models

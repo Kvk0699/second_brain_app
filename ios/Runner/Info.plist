@@ -28,6 +28,8 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Please authenticate to access your passwords</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -49,6 +51,7 @@
 	<array>
 		<string>https</string>
 		<string>http</string>
+		<string>tel</string>
 	</array>
 </dict>
 </plist>

@@ -103,7 +103,7 @@ class _PasswordDisplayWidgetState extends State<PasswordDisplayWidget> {
                 Icon(
                   Icons.remove_red_eye_outlined,
                   size: 16,
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.outline,
                 ),
               ],
             ),

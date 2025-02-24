@@ -128,6 +128,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         elevation: 0,
         leading: IconButton(
@@ -326,14 +327,6 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                   const SizedBox(width: 16),
                   ElevatedButton(
                     onPressed: _isSaving ? null : _saveNote,
-                    // style: ElevatedButton.styleFrom(
-                    //   backgroundColor: Colors.blue,
-                    //   foregroundColor: Colors.white,
-                    //   padding: const EdgeInsets.symmetric(
-                    //     horizontal: 24,
-                    //     vertical: 12,
-                    //   ),
-                    // ),
                     child: _isSaving
                         ? const SizedBox(
                             width: 20,
