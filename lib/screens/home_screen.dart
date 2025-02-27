@@ -634,36 +634,36 @@ Widget _buildAnswerBox(HomeController controller) {
           ),
         ),
         
-        // If there are references, show a divider and references section
-        if (controller.references.isNotEmpty) ...[
-          Divider(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-            height: 1,
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Referenced Items:',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: controller.references.map((ref) {
-                    return _buildReferenceChip(ref, controller);
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        ],
+        // // If there are references, show a divider and references section
+        // if (controller.references.isNotEmpty) ...[
+        //   Divider(
+        //     color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+        //     height: 1,
+        //   ),
+        //   Padding(
+        //     padding: const EdgeInsets.all(16),
+        //     child: Column(
+        //       crossAxisAlignment: CrossAxisAlignment.start,
+        //       children: [
+        //         Text(
+        //           'Referenced Items:',
+        //           style: Theme.of(context).textTheme.titleSmall?.copyWith(
+        //                 fontWeight: FontWeight.bold,
+        //                 color: Theme.of(context).colorScheme.onSurface,
+        //               ),
+        //         ),
+        //         const SizedBox(height: 8),
+        //         Wrap(
+        //           spacing: 8,
+        //           runSpacing: 8,
+        //           children: controller.references.map((ref) {
+        //             return _buildReferenceChip(ref, controller);
+        //           }).toList(),
+        //         ),
+        //       ],
+        //     ),
+        //   ),
+        // ],
       ],
     ),
   );
