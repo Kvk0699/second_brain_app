@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import '../services/config_service.dart';
 
 class LLMService {
-  // The Hugging Face API key - in a real app, use environment variables
-  // or secure storage rather than hardcoding the API key
-  final String _apiKey = '<YOUR_HF_TOKEN>';
-
+  final ConfigService _config = ConfigService();
+  
   // API endpoint
   final String _baseUrl =
       'https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct/v1/chat/completions';
@@ -19,6 +18,11 @@ class LLMService {
   /// Send a prompt to the LLM and get a response
   Future<String> getAnswerFromLLM(String prompt) async {
     try {
+      final apiKey = await _config.getApiKey();
+      if (apiKey == null) {
+        throw Exception('API key not found');
+      }
+
       // Construct the request body
       final requestBody = {
         "model": "Qwen/Qwen2.5-72B-Instruct",
@@ -26,7 +30,7 @@ class LLMService {
           {
             "role": "system",
             "content":
-                "You are a helpful assistant integrated into a personal information management app called 'Second Brain'. Respond to user questions in a concise, friendly, and helpful manner. For questions you don't have information about, clearly state that the data isn't available rather than making up answers.",
+                "You are a helpful assistant integrated into a personal information management app called 'Second Brain'. Respond to user questions in a concise, friendly, and helpful manner. For questions you don't have information about, clearly state that the data isn't available rather than making up answers. When referencing specific items in the user's data, use the following format: [[type:id|title]] where type is note, password, or event, id is the item's ID, and title is the display text. For example: [[note:123|Project Notes]]",
           },
           {
             "role": "user",
@@ -36,7 +40,6 @@ class LLMService {
         "temperature": _temperature,
         "max_tokens": _maxTokens,
         "top_p": _topP,
-        // remove "stream" or set to false if you don't want streaming
         "stream": false,
       };
 
@@ -45,39 +48,23 @@ class LLMService {
           .post(
             Uri.parse(_baseUrl),
             headers: {
-              "Authorization": "Bearer $_apiKey",
+              "Authorization": "Bearer $apiKey",
               "Content-Type": "application/json",
             },
             body: jsonEncode(requestBody),
           )
-          .timeout(
-              const Duration(seconds: 30)); // Add timeout to prevent long waits
+          .timeout(const Duration(seconds: 30));
 
-      // Check for a successful response
+      // Handle response
       if (response.statusCode == 200) {
-        try {
-          // Parse the JSON response
-          final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-
-          // Extract content from the response
-          final content = jsonResponse['choices'][0]['message']['content'];
-          return content;
-        } catch (parseError) {
-          debugPrint('Error parsing LLM response: $parseError');
-          return _getFallbackResponse();
-        }
+        final responseData = json.decode(response.body);
+        return responseData['choices'][0]['message']['content'] as String;
       } else {
-        debugPrint('Error status: ${response.statusCode} => ${response.body}');
-        return _getFallbackResponse();
+        throw Exception('Failed to get response: ${response.statusCode}');
       }
-    } catch (error) {
-      debugPrint('LLM call error: $error');
-      return _getFallbackResponse();
+    } catch (e) {
+      debugPrint('Error in LLM service: $e');
+      rethrow;
     }
-  }
-
-  // Get a fallback response if the LLM service fails
-  String _getFallbackResponse() {
-    return "I'm having trouble accessing my knowledge at the moment. Could you please try again? If this persists, please check your internet connection or try again later.";
   }
 }

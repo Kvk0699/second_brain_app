@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
 import '../utils/llm_service.dart';
+import '../models/reference_model.dart';
 
 class HomeController extends ChangeNotifier {
   final StorageService _storage = StorageService();
@@ -10,6 +11,8 @@ class HomeController extends ChangeNotifier {
   String searchQuery = '';
   String answer = '';
   bool isLoading = false;
+  String parsedAnswer = '';
+  List<ItemReference> references = [];
 
   // Theme management
   static const String themePreferenceKey = 'theme_mode';
@@ -118,28 +121,12 @@ class HomeController extends ChangeNotifier {
   // Chat related methods
   void clearAnswer() {
     answer = '';
+    parsedAnswer = '';
+    references = [];
     notifyListeners();
   }
 
-  Future<void> handleAsk(String question, BuildContext context) async {
-    if (question.trim().isEmpty || isLoading) return;
-
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final prompt = buildPromptWithNotes(question, items, context);
-      final llmResponse = await LLMService().getAnswerFromLLM(prompt);
-      answer = llmResponse;
-    } catch (error) {
-      answer = 'Something went wrong while fetching your answer.';
-      debugPrint('Error while asking LLM: $error');
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
+  // Modify the buildPromptWithNotes method to include item IDs
   String buildPromptWithNotes(
       String userQuestion, List<ItemModel> allItems, BuildContext context) {
     final now = DateTime.now();
@@ -163,28 +150,29 @@ class HomeController extends ChangeNotifier {
     final passwords = allItems.whereType<PasswordModel>().toList();
     final events = allItems.whereType<EventModel>().toList();
 
-    // Build context for notes
+    // Build context for notes with IDs
     final notesContext = notes.isEmpty
         ? "No notes stored."
         : notes.asMap().entries.map((entry) => '''
           Note #${entry.key + 1}:
+          ID: "${entry.value.id}"
           Title: "${entry.value.title}"
           Content: "${entry.value.content}"
           Last Updated: ${entry.value.updatedAt.toLocal().toString().split('.')[0]}
         ''').join('\n\n');
 
-    // Build context for passwords
+    // Build context for passwords with IDs
     final passwordsContext = passwords.isEmpty
         ? "No passwords stored."
         : passwords.asMap().entries.map((entry) => '''
         Password #${entry.key + 1}:
+        ID: "${entry.value.id}"
         Account: "${entry.value.accountName}"
         Username: "${entry.value.username}"
-        Password: "${entry.value.content}"
         Last Updated: ${entry.value.updatedAt.toLocal().toString().split('.')[0]}
       ''').join('\n\n');
 
-    // Build context for events with calculated time remaining
+    // Build context for events with IDs and calculated time remaining
     final eventsContext = events.isEmpty
         ? "No events stored."
         : events.asMap().entries.map((entry) {
@@ -206,6 +194,7 @@ class HomeController extends ChangeNotifier {
 
             return '''
               Event #${entry.key + 1}:
+              ID: "${event.id}"
               Title: "${event.title}"
               Description: "${event.description}"
               Date: ${event.eventDateTime.toLocal().toString().split('.')[0]}
@@ -233,15 +222,22 @@ class HomeController extends ChangeNotifier {
           - Indicate whether events are upcoming, happening today, or in the past
           - For upcoming events, mention how many days are left
         7. For searches across multiple types of data, prioritize the most relevant information first
+        8. IMPORTANT: When referencing specific notes, passwords, or events, include their ID in a special tag format:
+           - For notes: [[note:ID|Title]]
+           - For passwords: [[password:ID|Account Name]]
+           - For events: [[event:ID|Title]]
 
       STORED NOTES:
       $notesContext
 
+
       STORED PASSWORDS:
       $passwordsContext
 
+
       STORED EVENTS:
       $eventsContext
+
 
       The user question is: "$userQuestion"
 
@@ -249,6 +245,96 @@ class HomeController extends ChangeNotifier {
   ''';
   }
 
+  // Add a new class to represent a reference
+  Future<void> handleAsk(String question, BuildContext context) async {
+    if (question.trim().isEmpty || isLoading) return;
+
+    isLoading = true;
+    references = []; // Clear previous references
+    parsedAnswer = ''; // Clear previous parsed answer
+    notifyListeners();
+
+    try {
+      final prompt = buildPromptWithNotes(question, items, context);
+      final llmResponse = await LLMService().getAnswerFromLLM(prompt);
+      answer = llmResponse;
+      
+      // Parse the response to find and process references
+      parseResponseWithReferences(llmResponse);
+    } catch (error) {
+      answer = 'Something went wrong while fetching your answer.';
+      parsedAnswer = answer;
+      debugPrint('Error while asking LLM: $error');
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Parse the LLM response to find and process references
+  void parseResponseWithReferences(String response) {
+    // Regular expression to find references in the format [[type:id|title]]
+    final referenceRegex = RegExp(r'\[\[(note|password|event):([^|]+)\|([^\]]+)\]\]');
+    
+    // Find all matches
+    final matches = referenceRegex.allMatches(response);
+    
+    // If no references found, set parsedAnswer to the original response
+    if (matches.isEmpty) {
+      parsedAnswer = response;
+      return;
+    }
+    
+    // Extract references and replace them with markable text
+    String processedText = response;
+    int index = 0;
+    
+    for (final match in matches) {
+      final fullMatch = match.group(0) ?? '';
+      final type = match.group(1) ?? '';
+      final id = match.group(2) ?? '';
+      final title = match.group(3) ?? '';
+      
+      // Create a reference object
+      references.add(ItemReference(
+        id: id,
+        title: title,
+        type: _getReferenceType(type),
+        index: index++,
+      ));
+      
+      // Replace the reference in the text with a clickable marker
+      processedText = processedText.replaceFirst(
+        fullMatch, 
+        '[$title](#ref-$id)'
+      );
+    }
+    
+    parsedAnswer = processedText;
+  }
+  
+  // Helper method to convert string type to enum
+  ReferenceType _getReferenceType(String type) {
+    switch (type.toLowerCase()) {
+      case 'note':
+        return ReferenceType.note;
+      case 'password':
+        return ReferenceType.password;
+      case 'event':
+        return ReferenceType.event;
+      default:
+        return ReferenceType.note;
+    }
+  }
+  
+  // Method to find an item by ID
+  ItemModel? findItemById(String id) {
+    return items.firstWhere(
+      (item) => item.id == id,
+      orElse: () => null as ItemModel, // This will throw, but we handle it in the UI
+    );
+  }
+  
   Future<void> initializeTheme() async {
     await _loadThemePreference();
   }

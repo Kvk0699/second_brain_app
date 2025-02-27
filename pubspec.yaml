@@ -1,5 +1,5 @@
 name: second_brain_app
-description: "A new Flutter project."
+description: "Second Brain App"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -40,6 +40,8 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   local_auth: ^2.1.8
   app_settings: 5.1.1
+  flutter_dotenv: ^5.1.0
+  flutter_launcher_icons: ^0.14.3
 
 dev_dependencies:
   flutter_test:
@@ -93,3 +95,17 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  assets:
+    - .env
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "app_icon.png"
+  web:
+    generate: true
+  windows:
+    generate: true
+  macos:
+    generate: true
