@@ -201,6 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                prefixIconConstraints: const BoxConstraints(minWidth: 48),
+                isDense: true,
               ),
               onChanged: controller.updateSearchQuery,
             ),
