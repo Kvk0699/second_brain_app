@@ -98,6 +98,9 @@ flutter:
 
   assets:
     - .env
+    - assets/icon/
+    - assets/icon/app_icon.png
+    - assets/icon/splash_image.png
 
 flutter_launcher_icons:
   android: true
@@ -109,3 +112,13 @@ flutter_launcher_icons:
     generate: true
   macos:
     generate: true
+
+flutter_native_splash:
+  color: "#000000" 
+  image: app_icon.png
+  android: true
+  ios: true
+  fullscreen: true
+  android_12:
+    image: app_icon.png
+    color: "#000000"

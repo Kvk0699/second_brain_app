@@ -42,7 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> authenticateUser(HomeController controller) async {
+  Future<void> authenticateUser(HomeController controller,
+      {Function()? onAuthenticationSuccess}) async {
     bool isAuthorized = false;
     try {
       isAuthorized = await _localAuthentication.authenticate(
@@ -112,7 +113,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     if (isAuthorized) {
-      _navigateToPasswordList(context, controller);
+      //  _navigateToPasswordList(context, controller);
+      if (onAuthenticationSuccess != null) {
+        onAuthenticationSuccess.call();
+      }
     }
   }
 
@@ -169,7 +173,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Dark Mode',
+                Theme.of(context).brightness == Brightness.dark
+                    ? 'Light Mode'
+                    : 'Dark Mode',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
             ],
@@ -395,7 +401,9 @@ class _HomeScreenState extends State<HomeScreen> {
           color: Theme.of(context).colorScheme.surface,
         ),
         onTap: () {
-          authenticateUser(controller);
+          authenticateUser(controller,
+              onAuthenticationSuccess: () =>
+                  _navigateToPasswordList(context, controller));
         },
       ),
     );
@@ -493,255 +501,256 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-Widget _buildAnswerBox(HomeController controller) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 16),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Theme.of(context).colorScheme.shadow.withOpacity(0.05),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
+  Widget _buildAnswerBox(HomeController controller) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
         ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Answer header with avatar and close button
-        Padding(
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Answer header with avatar and close button
+          Padding(
             padding:
                 const EdgeInsets.only(right: 8, left: 16, top: 12, bottom: 4),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
-                child: Icon(
-                  Icons.auto_awesome,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
+                const SizedBox(width: 8),
+                Text(
+                  'Assistant',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Assistant',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
+                const Spacer(),
+                IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withOpacity(0.7),
+                  ),
+                  onPressed: controller.clearAnswer,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Divider
+          Divider(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+            height: 1,
+          ),
+
+          // Markdown content with proper padding and reference handling
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: MarkdownBody(
+              data: controller.parsedAnswer.isNotEmpty
+                  ? controller.parsedAnswer
+                  : controller.answer,
+              selectable: true,
+              styleSheet: MarkdownStyleSheet(
+                p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      height: 1.5,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                h1: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                h2: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                h3: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                strong: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                em: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                code: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
                       color: Theme.of(context).colorScheme.primary,
                     ),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: Icon(
-                  Icons.close_rounded,
-                  size: 20,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant
-                      .withOpacity(0.7),
+                codeblockPadding: const EdgeInsets.all(8),
+                codeblockDecoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                onPressed: controller.clearAnswer,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(
-                  minWidth: 32,
-                  minHeight: 32,
-                ),
+                listBullet: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                a: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
               ),
-            ],
-          ),
-        ),
-
-        // Divider
-        Divider(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-          height: 1,
-        ),
-
-        // Markdown content with proper padding and reference handling
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: MarkdownBody(
-            data: controller.parsedAnswer.isNotEmpty ? controller.parsedAnswer : controller.answer,
-            selectable: true,
-            styleSheet: MarkdownStyleSheet(
-              p: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    height: 1.5,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-              h1: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-              h2: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-              h3: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-              strong: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-              em: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontStyle: FontStyle.italic,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-              blockquote: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
-              code: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-              codeblockPadding: const EdgeInsets.all(8),
-              codeblockDecoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              listBullet: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-              a: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
-                  ),
-            ),
-            onTapLink: (text, href, title) {
-              if (href != null) {
-                if (href.startsWith('#ref-')) {
-                  // This is a reference to an item in the app
-                  final itemId = href.substring(5); // Remove '#ref-' prefix
-                  _handleReferenceClick(itemId, controller);
-                } else {
-                  // Regular URL, use the existing URL launcher
-                  _launchURL(href);
+              onTapLink: (text, href, title) {
+                if (href != null) {
+                  if (href.startsWith('#ref-')) {
+                    // This is a reference to an item in the app
+                    final itemId = href.substring(5); // Remove '#ref-' prefix
+                    _handleReferenceClick(itemId, controller);
+                  } else {
+                    // Regular URL, use the existing URL launcher
+                    _launchURL(href);
+                  }
                 }
-              }
-            },
+              },
+            ),
           ),
-        ),
-        
-        // // If there are references, show a divider and references section
-        // if (controller.references.isNotEmpty) ...[
-        //   Divider(
-        //     color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-        //     height: 1,
-        //   ),
-        //   Padding(
-        //     padding: const EdgeInsets.all(16),
-        //     child: Column(
-        //       crossAxisAlignment: CrossAxisAlignment.start,
-        //       children: [
-        //         Text(
-        //           'Referenced Items:',
-        //           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-        //                 fontWeight: FontWeight.bold,
-        //                 color: Theme.of(context).colorScheme.onSurface,
-        //               ),
-        //         ),
-        //         const SizedBox(height: 8),
-        //         Wrap(
-        //           spacing: 8,
-        //           runSpacing: 8,
-        //           children: controller.references.map((ref) {
-        //             return _buildReferenceChip(ref, controller);
-        //           }).toList(),
-        //         ),
-        //       ],
-        //     ),
-        //   ),
-        // ],
-      ],
-    ),
-  );
-}
+
+          // // If there are references, show a divider and references section
+          // if (controller.references.isNotEmpty) ...[
+          //   Divider(
+          //     color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+          //     height: 1,
+          //   ),
+          //   Padding(
+          //     padding: const EdgeInsets.all(16),
+          //     child: Column(
+          //       crossAxisAlignment: CrossAxisAlignment.start,
+          //       children: [
+          //         Text(
+          //           'Referenced Items:',
+          //           style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          //                 fontWeight: FontWeight.bold,
+          //                 color: Theme.of(context).colorScheme.onSurface,
+          //               ),
+          //         ),
+          //         const SizedBox(height: 8),
+          //         Wrap(
+          //           spacing: 8,
+          //           runSpacing: 8,
+          //           children: controller.references.map((ref) {
+          //             return _buildReferenceChip(ref, controller);
+          //           }).toList(),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ],
+        ],
+      ),
+    );
+  }
 
 // Add this method to handle reference clicks
-void _handleReferenceClick(String itemId, HomeController controller) {
-  try {
-    final item = controller.findItemById(itemId);
-    if (item != null) {
-      if (item is NoteModel) {
-        _handleNoteItemTap(note: item);
-      } else if (item is PasswordModel) {
-        authenticateUser(controller).then((_) {
-          if (_isUserAuthorized) {
-            _showPasswordBottomSheet(passwordNote: item);
-          }
-        });
-      } else if (item is EventModel) {
-        _showEventBottomSheet(context, eventNote: item);
+  void _handleReferenceClick(String itemId, HomeController controller) {
+    try {
+      final item = controller.findItemById(itemId);
+      if (item != null) {
+        if (item is NoteModel) {
+          _handleNoteItemTap(note: item);
+        } else if (item is PasswordModel) {
+          authenticateUser(controller,
+              onAuthenticationSuccess: () =>
+                  _showPasswordBottomSheet(passwordNote: item));
+        } else if (item is EventModel) {
+          _showEventBottomSheet(context, eventNote: item);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Referenced item not found'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Referenced item not found'),
+          content: Text('Error accessing referenced item: ${e.toString()}'),
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error accessing referenced item: ${e.toString()}'),
-        behavior: SnackBarBehavior.floating,
+  }
+
+// Add this method to build reference chips
+  Widget _buildReferenceChip(ItemReference ref, HomeController controller) {
+    late IconData icon;
+    late Color color;
+
+    switch (ref.type) {
+      case ReferenceType.note:
+        icon = Icons.note_outlined;
+        color = Theme.of(context).colorScheme.primary;
+        break;
+      case ReferenceType.password:
+        icon = Icons.lock_outlined;
+        color = Theme.of(context).colorScheme.error;
+        break;
+      case ReferenceType.event:
+        icon = Icons.event_outlined;
+        color = Theme.of(context).colorScheme.tertiary;
+        break;
+    }
+
+    return GestureDetector(
+      onTap: () => _handleReferenceClick(ref.id, controller),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        child: Chip(
+          avatar: Icon(
+            icon,
+            size: 16,
+            color: color,
+          ),
+          label: Text(ref.title),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          side: BorderSide(
+            color: color.withOpacity(0.5),
+          ),
+        ),
       ),
     );
   }
-}
 
-// Add this method to build reference chips
-Widget _buildReferenceChip(ItemReference ref, HomeController controller) {
-  late IconData icon;
-  late Color color;
-  
-  switch (ref.type) {
-    case ReferenceType.note:
-      icon = Icons.note_outlined;
-      color = Theme.of(context).colorScheme.primary;
-      break;
-    case ReferenceType.password:
-      icon = Icons.lock_outlined;
-      color = Theme.of(context).colorScheme.error;
-      break;
-    case ReferenceType.event:
-      icon = Icons.event_outlined;
-      color = Theme.of(context).colorScheme.tertiary;
-      break;
-  }
-
-  return GestureDetector(
-    onTap: () => _handleReferenceClick(ref.id, controller),
-    child: Container(
-      margin: const EdgeInsets.only(right: 8),
-      child: Chip(
-        avatar: Icon(
-          icon,
-          size: 16,
-          color: color,
-        ),
-        label: Text(ref.title),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        side: BorderSide(
-          color: color.withOpacity(0.5),
-        ),
-      ),
-    ),
-  );
-}
   // Add this method to handle URL launching
   Future<void> _launchURL(String? url) async {
     if (url != null) {
@@ -805,8 +814,21 @@ Widget _buildReferenceChip(ItemReference ref, HomeController controller) {
                 horizontal: 16,
                 vertical: 12,
               ),
+              suffixIcon: questionController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        questionController.clear();
+                        setState(() {});
+                      },
+                    )
+                  : null,
             ),
-            onSubmitted: (_) => handleAsk(context),
+            onSubmitted: (_) {
+              handleAsk(context);
+              FocusManager.instance.primaryFocus?.unfocus();
+            },
+            onChanged: (_) => setState(() {}),
           ),
         ),
         const SizedBox(width: 8),
@@ -828,7 +850,10 @@ Widget _buildReferenceChip(ItemReference ref, HomeController controller) {
             ],
           ),
           child: IconButton(
-            onPressed: () => handleAsk(context),
+            onPressed: () {
+              handleAsk(context);
+              FocusManager.instance.primaryFocus?.unfocus();
+            },
             icon: const Icon(Icons.send_rounded, color: Colors.white),
           ),
         ),

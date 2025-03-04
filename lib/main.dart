@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'controllers/home_controller.dart';
+import 'screens/spalsh_screen.dart';
 import 'utils/theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'services/config_service.dart';
@@ -40,7 +41,10 @@ class MyApp extends StatelessWidget {
         theme: materialTheme.light(),
         darkTheme: materialTheme.dark(),
         themeMode: controller.themeMode,
-        home: const HomeScreen(),
+        home: SplashScreen(themeMode: controller.themeMode),
+        routes: {
+          '/home': (context) => const HomeScreen(),
+        },
       ),
     );
   }
