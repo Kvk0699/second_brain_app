@@ -4,6 +4,8 @@ import '../models/item_model.dart';
 import '../services/storage_service.dart';
 import '../utils/llm_service.dart';
 import '../models/reference_model.dart';
+import '../services/config_service.dart';
+import '../models/api_config_model.dart';
 
 class HomeController extends ChangeNotifier {
   final StorageService _storage = StorageService();
@@ -18,9 +20,14 @@ class HomeController extends ChangeNotifier {
   static const String themePreferenceKey = 'theme_mode';
   ThemeMode _themeMode = ThemeMode.system;
 
+  // API configuration management
+  final ConfigService _configService = ConfigService();
+  ApiConfigModel? activeApiConfig;
+
   HomeController() {
     _loadThemePreference();
     _initializeDummyData();
+    _loadActiveApiConfig();
   }
 
   ThemeMode get themeMode => _themeMode;
@@ -35,6 +42,19 @@ class HomeController extends ChangeNotifier {
       );
       notifyListeners();
     }
+  }
+
+  Future<void> _loadActiveApiConfig() async {
+    try {
+      activeApiConfig = await _configService.getActiveApiConfig();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading active API config: $e');
+    }
+  }
+
+  Future<void> refreshApiConfig() async {
+    await _loadActiveApiConfig();
   }
 
   Future<void> toggleTheme() async {
@@ -255,14 +275,21 @@ class HomeController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prompt = buildPromptWithNotes(question, items, context);
-      final llmResponse = await LLMService().getAnswerFromLLM(prompt);
-      answer = llmResponse;
-      
-      // Parse the response to find and process references
-      parseResponseWithReferences(llmResponse);
+      if (activeApiConfig == null) {
+        answer =
+            "Please configure an API service in Settings before asking questions.";
+        parsedAnswer = answer;
+      } else {
+        final prompt = buildPromptWithNotes(question, items, context);
+        final llmResponse = await LLMService().getAnswerFromLLM(prompt);
+        answer = llmResponse;
+
+        // Parse the response to find and process references
+        parseResponseWithReferences(llmResponse);
+      }
     } catch (error) {
-      answer = 'Something went wrong while fetching your answer.';
+      answer =
+          'Something went wrong while fetching your answer. Please check your API configuration in Settings.';
       parsedAnswer = answer;
       debugPrint('Error while asking LLM: $error');
     } finally {
@@ -274,27 +301,28 @@ class HomeController extends ChangeNotifier {
   // Parse the LLM response to find and process references
   void parseResponseWithReferences(String response) {
     // Regular expression to find references in the format [[type:id|title]]
-    final referenceRegex = RegExp(r'\[\[(note|password|event):([^|]+)\|([^\]]+)\]\]');
-    
+    final referenceRegex =
+        RegExp(r'\[\[(note|password|event):([^|]+)\|([^\]]+)\]\]');
+
     // Find all matches
     final matches = referenceRegex.allMatches(response);
-    
+
     // If no references found, set parsedAnswer to the original response
     if (matches.isEmpty) {
       parsedAnswer = response;
       return;
     }
-    
+
     // Extract references and replace them with markable text
     String processedText = response;
     int index = 0;
-    
+
     for (final match in matches) {
       final fullMatch = match.group(0) ?? '';
       final type = match.group(1) ?? '';
       final id = match.group(2) ?? '';
       final title = match.group(3) ?? '';
-      
+
       // Create a reference object
       references.add(ItemReference(
         id: id,
@@ -302,17 +330,15 @@ class HomeController extends ChangeNotifier {
         type: _getReferenceType(type),
         index: index++,
       ));
-      
+
       // Replace the reference in the text with a clickable marker
-      processedText = processedText.replaceFirst(
-        fullMatch, 
-        '[$title](#ref-$id)'
-      );
+      processedText =
+          processedText.replaceFirst(fullMatch, '[$title](#ref-$id)');
     }
-    
+
     parsedAnswer = processedText;
   }
-  
+
   // Helper method to convert string type to enum
   ReferenceType _getReferenceType(String type) {
     switch (type.toLowerCase()) {
@@ -326,15 +352,16 @@ class HomeController extends ChangeNotifier {
         return ReferenceType.note;
     }
   }
-  
+
   // Method to find an item by ID
   ItemModel? findItemById(String id) {
     return items.firstWhere(
       (item) => item.id == id,
-      orElse: () => null as ItemModel, // This will throw, but we handle it in the UI
+      orElse: () =>
+          null as ItemModel, // This will throw, but we handle it in the UI
     );
   }
-  
+
   Future<void> initializeTheme() async {
     await _loadThemePreference();
   }
