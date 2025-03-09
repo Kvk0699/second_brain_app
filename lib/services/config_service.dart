@@ -7,17 +7,17 @@ class ConfigService {
   ConfigService._internal();
 
   final _storage = const FlutterSecureStorage();
-  static const _apiKeyKey = 'hugging_face_api_key';
-  
+  static const _apiKeyKey = 'google_api_key';
+
   /// Initialize configuration
   Future<void> init() async {
     await dotenv.load();
-    
+
     // Check if API key is already stored securely
     final storedKey = await _storage.read(key: _apiKeyKey);
     if (storedKey == null) {
       // Store API key securely on first run
-      final envKey = dotenv.env['HUGGING_FACE_API_KEY'];
+      final envKey = dotenv.env['GOOGLE_API_KEY'];
       if (envKey != null) {
         await _storage.write(key: _apiKeyKey, value: envKey);
       }
@@ -30,7 +30,7 @@ class ConfigService {
       return await _storage.read(key: _apiKeyKey);
     } catch (e) {
       // Fallback to env file if secure storage fails
-      return dotenv.env['HUGGING_FACE_API_KEY'];
+      return dotenv.env['GOOGLE_API_KEY'];
     }
   }
 
