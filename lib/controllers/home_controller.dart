@@ -212,7 +212,7 @@ class HomeController extends ChangeNotifier {
       Guidelines for your responses:
         1. Be warm and personal, but brief and direct in your answers.
         2. Use ONLY information found in the user's data. For questions without relevant data, say:
-          "I don't have any information about that in your notes yet! 📝"
+          "I don't have any information about that in your notes yet!"
         3. When sharing sensitive information like passwords:
           - Only show the specific details that were asked for
           - Confirm that you're sharing sensitive information
@@ -258,11 +258,11 @@ class HomeController extends ChangeNotifier {
       final prompt = buildPromptWithNotes(question, items, context);
       final llmResponse = await LLMService().getAnswerFromLLM(prompt);
       answer = llmResponse;
-      
+
       // Parse the response to find and process references
       parseResponseWithReferences(llmResponse);
     } catch (error) {
-      answer = 'Something went wrong while fetching your answer.';
+      answer = 'An error occurred: ${error.toString().split('\n')[0]}';
       parsedAnswer = answer;
       debugPrint('Error while asking LLM: $error');
     } finally {
@@ -274,27 +274,28 @@ class HomeController extends ChangeNotifier {
   // Parse the LLM response to find and process references
   void parseResponseWithReferences(String response) {
     // Regular expression to find references in the format [[type:id|title]]
-    final referenceRegex = RegExp(r'\[\[(note|password|event):([^|]+)\|([^\]]+)\]\]');
-    
+    final referenceRegex =
+        RegExp(r'\[\[(note|password|event):([^|]+)\|([^\]]+)\]\]');
+
     // Find all matches
     final matches = referenceRegex.allMatches(response);
-    
+
     // If no references found, set parsedAnswer to the original response
     if (matches.isEmpty) {
       parsedAnswer = response;
       return;
     }
-    
+
     // Extract references and replace them with markable text
     String processedText = response;
     int index = 0;
-    
+
     for (final match in matches) {
       final fullMatch = match.group(0) ?? '';
       final type = match.group(1) ?? '';
       final id = match.group(2) ?? '';
       final title = match.group(3) ?? '';
-      
+
       // Create a reference object
       references.add(ItemReference(
         id: id,
@@ -302,17 +303,15 @@ class HomeController extends ChangeNotifier {
         type: _getReferenceType(type),
         index: index++,
       ));
-      
+
       // Replace the reference in the text with a clickable marker
-      processedText = processedText.replaceFirst(
-        fullMatch, 
-        '[$title](#ref-$id)'
-      );
+      processedText =
+          processedText.replaceFirst(fullMatch, '[$title](#ref-$id)');
     }
-    
+
     parsedAnswer = processedText;
   }
-  
+
   // Helper method to convert string type to enum
   ReferenceType _getReferenceType(String type) {
     switch (type.toLowerCase()) {
@@ -326,15 +325,16 @@ class HomeController extends ChangeNotifier {
         return ReferenceType.note;
     }
   }
-  
+
   // Method to find an item by ID
   ItemModel? findItemById(String id) {
     return items.firstWhere(
       (item) => item.id == id,
-      orElse: () => null as ItemModel, // This will throw, but we handle it in the UI
+      orElse: () =>
+          null as ItemModel, // This will throw, but we handle it in the UI
     );
   }
-  
+
   Future<void> initializeTheme() async {
     await _loadThemePreference();
   }

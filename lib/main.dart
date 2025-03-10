@@ -4,13 +4,13 @@ import 'package:provider/provider.dart';
 import 'controllers/home_controller.dart';
 import 'utils/theme.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'services/config_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize configuration
-  await ConfigService().init();
+  // Load environment variables
+  await dotenv.load();
 
   final homeController = HomeController();
   await homeController.initializeTheme();

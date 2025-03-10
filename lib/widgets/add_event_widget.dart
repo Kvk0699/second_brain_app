@@ -23,6 +23,9 @@ class _AddEventWidgetState extends State<AddEventWidget> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
+  bool _titleError = false;
+  bool _dateError = false;
+
   @override
   void initState() {
     super.initState();
@@ -97,57 +100,92 @@ class _AddEventWidgetState extends State<AddEventWidget> {
             decoration: InputDecoration(
               labelText: 'Event Title',
               hintText: 'Enter event title',
+              errorText: _titleError ? 'Title is required' : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: _titleError
+                      ? Theme.of(context).colorScheme.error
+                      : Colors.grey,
+                ),
               ),
               prefixIcon: Icon(
                 Icons.event_note,
-                color: Theme.of(context).colorScheme.secondary,
+                color: _titleError
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(context).colorScheme.secondary,
               ),
             ),
+            onChanged: (value) {
+              if (_titleError) {
+                setState(() => _titleError = false);
+              }
+            },
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              // Date Field
               Expanded(
                 child: TextFormField(
                   controller: _dateController,
                   readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Date',
+                    hintText: 'Select date',
+                    errorText: _dateError ? 'Date is required' : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: _dateError
+                            ? Theme.of(context).colorScheme.error
+                            : Colors.grey,
+                      ),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.calendar_today,
+                      color: _dateError
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.secondary,
+                    ),
+                  ),
                   onTap: () async {
                     final DateTime? picked = await showDatePicker(
                       context: context,
                       initialDate: _selectedDate ?? DateTime.now(),
-                      firstDate: DateTime.now(),
+                      firstDate: DateTime.now()
+                          .subtract(const Duration(days: 365 * 100)),
                       lastDate:
-                          DateTime.now().add(const Duration(days: 365 * 5)),
+                          DateTime.now().add(const Duration(days: 365 * 100)),
                     );
                     if (picked != null) {
                       setState(() {
                         _selectedDate = picked;
                         _dateController.text = picked.toString().split(' ')[0];
+                        _dateError = false;
                       });
                     }
                   },
-                  decoration: InputDecoration(
-                    labelText: 'Date',
-                    hintText: 'Select date',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.calendar_today,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                  ),
                 ),
               ),
               const SizedBox(width: 12),
-              // Time Field
               Expanded(
                 child: TextFormField(
                   controller: _timeController,
                   readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Time',
+                    hintText: 'Select time',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Colors.grey,
+                      ),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.access_time,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                  ),
                   onTap: () async {
                     final TimeOfDay? picked = await showTimePicker(
                       context: context,
@@ -160,17 +198,6 @@ class _AddEventWidgetState extends State<AddEventWidget> {
                       });
                     }
                   },
-                  decoration: InputDecoration(
-                    labelText: 'Time',
-                    hintText: 'Select time',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.access_time,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -202,9 +229,12 @@ class _AddEventWidgetState extends State<AddEventWidget> {
               const SizedBox(width: 12),
               ElevatedButton(
                 onPressed: () {
-                  if (_titleController.text.isNotEmpty &&
-                      _selectedDate != null) {
-                    // Combine date and time
+                  setState(() {
+                    _titleError = _titleController.text.trim().isEmpty;
+                    _dateError = _selectedDate == null;
+                  });
+
+                  if (!_titleError && !_dateError) {
                     final DateTime eventDateTime = DateTime(
                       _selectedDate!.year,
                       _selectedDate!.month,
@@ -212,8 +242,6 @@ class _AddEventWidgetState extends State<AddEventWidget> {
                       _selectedTime?.hour ?? 0,
                       _selectedTime?.minute ?? 0,
                     );
-
-                    // Return event data to the caller
                     Navigator.pop(context, {
                       'id': widget.eventNote?.id,
                       'title': _titleController.text,

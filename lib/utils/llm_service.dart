@@ -1,11 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import '../services/config_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class LLMService {
-  final ConfigService _config = ConfigService();
-
   // API endpoint
   final String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
@@ -19,9 +17,9 @@ class LLMService {
   /// Send a prompt to the LLM and get a response
   Future<String> getAnswerFromLLM(String prompt) async {
     try {
-      final apiKey = await _config.getApiKey();
+      var apiKey = dotenv.env['GOOGLE_API_KEY'];
       if (apiKey == null) {
-        throw Exception('API key not found');
+        throw Exception('API key not found, $apiKey');
       }
 
       // Construct the request body

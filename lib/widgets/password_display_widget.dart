@@ -67,9 +67,13 @@ class _PasswordDisplayWidgetState extends State<PasswordDisplayWidget> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => widget.onItemTap(widget.item),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => widget.onItemTap(widget.item),
+                ),
               ),
             ],
           ),
@@ -100,10 +104,13 @@ class _PasswordDisplayWidgetState extends State<PasswordDisplayWidget> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Icon(
-                  Icons.remove_red_eye_outlined,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.outline,
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: Icon(
+                    Icons.remove_red_eye_outlined,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
               ],
             ),
