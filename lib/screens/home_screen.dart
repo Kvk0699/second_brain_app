@@ -789,7 +789,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const CircularProgressIndicator(),
           const SizedBox(width: 16),
           Text(
-            '🤔 Thinking...',
+            'Thinking...',
             style: TextStyle(color: Colors.grey.shade600),
           ),
         ],
