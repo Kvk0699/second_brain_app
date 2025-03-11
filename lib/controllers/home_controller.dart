@@ -226,7 +226,8 @@ class HomeController extends ChangeNotifier {
            - For notes: [[note:ID|Title]]
            - For passwords: [[password:ID|Account Name]]
            - For events: [[event:ID|Title]]
-
+        9. Use Markdown formatting for improved readability
+           
       STORED NOTES:
       $notesContext
 
@@ -241,7 +242,7 @@ class HomeController extends ChangeNotifier {
 
       The user question is: "$userQuestion"
 
-      Now provide a concise, direct answer using only the information available above. Use Markdown formatting for clarity.
+      Now provide a concise, direct answer using only the information available above. Utilize appropriate Markdown formatting for clarity and readability.
   ''';
   }
 
