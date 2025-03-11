@@ -1,10 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/item_model.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:uuid/uuid.dart';
 
 class StorageService {
   static const String _storageKey = 'items';
+  final Uuid _uuid = const Uuid();
 
   // Create storage instance with iOS and Android options
   final _storage = const FlutterSecureStorage(
@@ -100,5 +105,69 @@ class StorageService {
   // Clear all data (useful for logout)
   Future<void> clearAllData() async {
     await _storage.delete(key: _storageKey);
+  }
+
+  // Method to save a document file
+  Future<DocumentModel> saveDocument(
+    File file,
+    String title, {
+    String? description,
+  }) async {
+    try {
+      // Create documents directory if it doesn't exist
+      final appDir = await getApplicationDocumentsDirectory();
+      final docsDir = Directory('${appDir.path}/documents');
+      if (!await docsDir.exists()) {
+        await docsDir.create(recursive: true);
+      }
+
+      // Generate a unique filename to avoid conflicts
+      final uniqueId = _uuid.v4();
+      final fileExtension = p.extension(file.path);
+      final fileName = '$uniqueId$fileExtension';
+      final savePath = p.join(docsDir.path, fileName);
+
+      // Copy the file to app documents directory
+      final savedFile = await file.copy(savePath);
+
+      // Create a document model
+      final document = DocumentModel(
+        id: uniqueId,
+        title: title,
+        filePath: savePath,
+        fileExtension: fileExtension,
+        fileSize: await file.length(),
+        description: description,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // Save the document model
+      await addItem(document);
+
+      return document;
+    } catch (e) {
+      debugPrint('Error saving document: $e');
+      rethrow;
+    }
+  }
+
+  // Method to delete a document
+  Future<bool> deleteDocument(DocumentModel document) async {
+    try {
+      // Delete the file
+      if (document.filePath != null) {
+        final file = File(document.filePath!);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+
+      // Delete the document from storage
+      return await deleteItem(document.id);
+    } catch (e) {
+      debugPrint('Error deleting document: $e');
+      return false;
+    }
   }
 }

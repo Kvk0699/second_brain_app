@@ -71,6 +71,10 @@ class HomeController extends ChangeNotifier {
       filteredItems.where((item) => item is EventModel).toList()
         ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
+  List<ItemModel> get documentsList =>
+      filteredItems.where((item) => item is DocumentModel).toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
   List<ItemModel> get upcomingEvents {
     final now = DateTime.now();
     final tomorrow = now.add(const Duration(days: 1));
@@ -149,6 +153,7 @@ class HomeController extends ChangeNotifier {
     final notes = allItems.whereType<NoteModel>().toList();
     final passwords = allItems.whereType<PasswordModel>().toList();
     final events = allItems.whereType<EventModel>().toList();
+    final documents = allItems.whereType<DocumentModel>().toList();
 
     // Build context for notes with IDs
     final notesContext = notes.isEmpty
@@ -202,9 +207,25 @@ class HomeController extends ChangeNotifier {
             ''';
           }).join('\n\n');
 
+    // Build context for documents
+    final documentsContext = documents.isEmpty
+        ? "No documents stored."
+        : documents.asMap().entries.map((entry) {
+            final doc = entry.value;
+            return '''
+              Document #${entry.key + 1}:
+              ID: "${doc.id}"
+              Title: "${doc.title}"
+              Description: "${doc.description ?? 'No description'}"
+              File Type: "${doc.fileExtension ?? 'Unknown'}"
+              File Size: ${_formatFileSize(doc.fileSize)}
+              Last Updated: ${doc.updatedAt.toLocal().toString().split('.')[0]}
+            ''';
+          }).join('\n\n');
+
     return '''
       You are a personal assistant managing the user's digital notebook called Second Brain. 
-      This notebook contains sensitive personal information including notes, password details, and scheduled events.
+      This notebook contains sensitive personal information including notes, password details, scheduled events, and documents.
       
       Current Date: $currentDate
       Current Time: $currentTime
@@ -226,19 +247,20 @@ class HomeController extends ChangeNotifier {
            - For notes: [[note:ID|Title]]
            - For passwords: [[password:ID|Account Name]]
            - For events: [[event:ID|Title]]
+           - For documents: [[document:ID|Title]]
         9. Use Markdown formatting for improved readability
            
       STORED NOTES:
       $notesContext
 
-
       STORED PASSWORDS:
       $passwordsContext
 
-
       STORED EVENTS:
       $eventsContext
-
+      
+      STORED DOCUMENTS:
+      $documentsContext
 
       The user question is: "$userQuestion"
 
@@ -276,7 +298,7 @@ class HomeController extends ChangeNotifier {
   void parseResponseWithReferences(String response) {
     // Regular expression to find references in the format [[type:id|title]]
     final referenceRegex =
-        RegExp(r'\[\[(note|password|event):([^|]+)\|([^\]]+)\]\]');
+        RegExp(r'\[\[(note|password|event|document):([^|]+)\|([^\]]+)\]\]');
 
     // Find all matches
     final matches = referenceRegex.allMatches(response);
@@ -322,8 +344,23 @@ class HomeController extends ChangeNotifier {
         return ReferenceType.password;
       case 'event':
         return ReferenceType.event;
+      case 'document':
+        return ReferenceType.document;
       default:
         return ReferenceType.note;
+    }
+  }
+
+  // Helper method for file size formatting
+  String _formatFileSize(int? fileSize) {
+    if (fileSize == null) return "Unknown";
+
+    final kb = fileSize / 1024;
+    if (kb < 1024) {
+      return "${kb.toStringAsFixed(2)} KB";
+    } else {
+      final mb = kb / 1024;
+      return "${mb.toStringAsFixed(2)} MB";
     }
   }
 

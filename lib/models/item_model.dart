@@ -1,9 +1,19 @@
+enum ItemType {
+  note,
+  event,
+  password,
+  document,
+}
+
 abstract class ItemModel {
   final String id;
   final String title;
   final String content;
   final DateTime createdAt;
   final DateTime updatedAt;
+  String? filePath;
+  String? fileExtension;
+  int? fileSize;
 
   ItemModel({
     required this.id,
@@ -25,6 +35,8 @@ abstract class ItemModel {
         return PasswordModel.fromJson(json);
       case 'event':
         return EventModel.fromJson(json);
+      case 'document':
+        return DocumentModel.fromJson(json);
       default:
         throw Exception('Unknown item type: $type');
     }
@@ -160,6 +172,60 @@ class EventModel extends ItemModel {
       'title': title,
       'description': description,
       'datetime': eventDateTime.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+}
+
+class DocumentModel extends ItemModel {
+  final String? description;
+
+  DocumentModel({
+    required String id,
+    required String title,
+    required String filePath,
+    required String fileExtension,
+    required int fileSize,
+    this.description,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : super(
+          id: id,
+          title: title,
+          content: '', // Content is not used for documents
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        ) {
+    super.filePath = filePath;
+    super.fileExtension = fileExtension;
+    super.fileSize = fileSize;
+  }
+
+  factory DocumentModel.fromJson(Map<String, dynamic> json) {
+    return DocumentModel(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      filePath: json['filePath'] as String,
+      fileExtension: json['fileExtension'] as String,
+      fileSize: json['fileSize'] as int,
+      description: json['description'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'document',
+      'id': id,
+      'title': title,
+      'filePath': filePath,
+      'fileExtension': fileExtension,
+      'fileSize': fileSize,
+      'description': description,
+      'content': content,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

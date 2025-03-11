@@ -16,6 +16,8 @@ import '../models/item_model.dart';
 import 'item_list_screen.dart';
 import '../controllers/home_controller.dart';
 import '../models/reference_model.dart';
+import '../screens/add_document_screen.dart';
+import '../widgets/document_display_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -374,6 +376,8 @@ class _HomeScreenState extends State<HomeScreen> {
           if (controller.passwordsList.isNotEmpty)
             _buildPasswordSection(controller),
           if (controller.eventsList.isNotEmpty) _buildEventsSection(controller),
+          if (controller.documentsList.isNotEmpty)
+            _buildDocumentsSection(controller),
           if (controller.notesList.isNotEmpty) _buildNotesSection(controller),
         ],
       ),
@@ -407,6 +411,57 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+
+  Widget _buildDocumentsSection(HomeController controller) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        tileColor: Theme.of(context).colorScheme.secondaryContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        title: Text(
+          'Documents',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSecondaryContainer,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_right_outlined,
+          color: Theme.of(context).colorScheme.onSecondaryContainer,
+        ),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ItemListScreen(
+              title: "Documents",
+              items: controller.documentsList,
+              onItemTap: (item) {
+                // Handle document deletion or opening
+                if (item is DocumentModel) {
+                  _handleDocumentAction(item);
+                }
+              },
+            ),
+          ),
+        ).then((value) {
+          if (value == true && mounted) {
+            context.read<HomeController>().loadNotes();
+          }
+        }),
+      ),
+    );
+  }
+
+  // Add this method to handle document actions
+  void _handleDocumentAction(DocumentModel document) {
+    // For documents, we'll just handle the delete action
+    // since opening is handled in the DocumentDisplayWidget
+    // context.read<HomeController>().deleteItem(document.id);
+    context.read<HomeController>().loadNotes();
   }
 
   Widget _buildNotesSection(HomeController controller) {
@@ -693,6 +748,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   _showPasswordBottomSheet(passwordNote: item));
         } else if (item is EventModel) {
           _showEventBottomSheet(context, eventNote: item);
+        } else if (item is DocumentModel) {
+          // For documents, navigate to document list filtered to this item
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ItemListScreen(
+                title: "Document",
+                items: [item],
+                onItemTap: (document) {
+                  if (document is DocumentModel) {
+                    _handleDocumentAction(document);
+                  }
+                },
+              ),
+            ),
+          );
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -712,7 +783,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-// Add this method to build reference chips
+  // Add this method to build reference chips
   Widget _buildReferenceChip(ItemReference ref, HomeController controller) {
     late IconData icon;
     late Color color;
@@ -729,6 +800,10 @@ class _HomeScreenState extends State<HomeScreen> {
       case ReferenceType.event:
         icon = Icons.event_outlined;
         color = Theme.of(context).colorScheme.tertiary;
+        break;
+      case ReferenceType.document:
+        icon = Icons.insert_drive_file_outlined;
+        color = Theme.of(context).colorScheme.secondary;
         break;
     }
 
@@ -874,9 +949,20 @@ class _HomeScreenState extends State<HomeScreen> {
       case AddOption.password:
         _showPasswordBottomSheet();
         break;
-
       case AddOption.event:
         _showEventBottomSheet(context);
+        break;
+      case AddOption.document:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AddDocumentScreen(),
+          ),
+        ).then((value) {
+          if (value == true && mounted) {
+            context.read<HomeController>().loadNotes();
+          }
+        });
         break;
     }
   }
@@ -925,9 +1011,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     onTap: () {
                       Navigator.pop(context);
-                      _handleAddOption(
-                        option,
-                      );
+                      _handleAddOption(option);
                     },
                   ))
               .toList(),
