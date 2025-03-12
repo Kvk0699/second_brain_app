@@ -112,25 +112,18 @@ class StorageService {
     File file,
     String title, {
     String? description,
+    String? id,
   }) async {
     try {
-      // Create documents directory if it doesn't exist
-      final appDir = await getApplicationDocumentsDirectory();
-      final docsDir = Directory('${appDir.path}/documents');
-      if (!await docsDir.exists()) {
-        await docsDir.create(recursive: true);
-      }
+      final String uniqueId = id ?? const Uuid().v4();
+      final String fileExtension = p.extension(file.path);
+      final String fileName = '$uniqueId$fileExtension';
+      final Directory appDir = await getApplicationDocumentsDirectory();
+      final String savePath = p.join(appDir.path, fileName);
 
-      // Generate a unique filename to avoid conflicts
-      final uniqueId = _uuid.v4();
-      final fileExtension = p.extension(file.path);
-      final fileName = '$uniqueId$fileExtension';
-      final savePath = p.join(docsDir.path, fileName);
+      // Copy file to app directory
+      await file.copy(savePath);
 
-      // Copy the file to app documents directory
-      final savedFile = await file.copy(savePath);
-
-      // Create a document model
       final document = DocumentModel(
         id: uniqueId,
         title: title,
@@ -142,9 +135,7 @@ class StorageService {
         updatedAt: DateTime.now(),
       );
 
-      // Save the document model
       await addItem(document);
-
       return document;
     } catch (e) {
       debugPrint('Error saving document: $e');
