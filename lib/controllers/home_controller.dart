@@ -135,13 +135,13 @@ class HomeController extends ChangeNotifier {
 
     if (allItems.isEmpty) {
       return '''
-        You are a friendly personal assistant managing the user's secure digital notebook.
+        You are a personal assistant managing the user's secure digital notebook called Second Brain.
         Current Date: $currentDate
         Current Time: $currentTime
         
         The user question is: "$userQuestion"
         Since there are no notes available, respond with:
-        "I don't see any notes yet! 📝 Feel free to add some information and I'll be happy to help you recall it."
+        "I don't see any notes in your Second Brain yet. Feel free to add some information and I'll be happy to help you recall it."
       ''';
     }
 
@@ -203,16 +203,16 @@ class HomeController extends ChangeNotifier {
           }).join('\n\n');
 
     return '''
-      You are a friendly and secure personal assistant managing the user's digital notebook. 
+      You are a personal assistant managing the user's digital notebook called Second Brain. 
       This notebook contains sensitive personal information including notes, password details, and scheduled events.
       
       Current Date: $currentDate
       Current Time: $currentTime
 
       Guidelines for your responses:
-        1. Be warm and personal, but brief and direct in your answers.
+        1. Be professional and brief in your answers, avoiding emoji usage.
         2. Use ONLY information found in the user's data. For questions without relevant data, say:
-          "I don't have any information about that in your notes yet! 📝"
+          "I don't have any information about that in your Second Brain yet."
         3. When sharing sensitive information like passwords:
           - Only show the specific details that were asked for
           - Confirm that you're sharing sensitive information
@@ -226,7 +226,8 @@ class HomeController extends ChangeNotifier {
            - For notes: [[note:ID|Title]]
            - For passwords: [[password:ID|Account Name]]
            - For events: [[event:ID|Title]]
-
+        9. Use Markdown formatting for improved readability
+           
       STORED NOTES:
       $notesContext
 
@@ -241,7 +242,7 @@ class HomeController extends ChangeNotifier {
 
       The user question is: "$userQuestion"
 
-      Now provide a concise, direct answer using only the information available above. Use Markdown formatting for clarity.
+      Now provide a concise, direct answer using only the information available above. Utilize appropriate Markdown formatting for clarity and readability.
   ''';
   }
 
@@ -258,11 +259,11 @@ class HomeController extends ChangeNotifier {
       final prompt = buildPromptWithNotes(question, items, context);
       final llmResponse = await LLMService().getAnswerFromLLM(prompt);
       answer = llmResponse;
-      
+
       // Parse the response to find and process references
       parseResponseWithReferences(llmResponse);
     } catch (error) {
-      answer = 'Something went wrong while fetching your answer.';
+      answer = 'An error occurred: ${error.toString().split('\n')[0]}';
       parsedAnswer = answer;
       debugPrint('Error while asking LLM: $error');
     } finally {
@@ -274,27 +275,28 @@ class HomeController extends ChangeNotifier {
   // Parse the LLM response to find and process references
   void parseResponseWithReferences(String response) {
     // Regular expression to find references in the format [[type:id|title]]
-    final referenceRegex = RegExp(r'\[\[(note|password|event):([^|]+)\|([^\]]+)\]\]');
-    
+    final referenceRegex =
+        RegExp(r'\[\[(note|password|event):([^|]+)\|([^\]]+)\]\]');
+
     // Find all matches
     final matches = referenceRegex.allMatches(response);
-    
+
     // If no references found, set parsedAnswer to the original response
     if (matches.isEmpty) {
       parsedAnswer = response;
       return;
     }
-    
+
     // Extract references and replace them with markable text
     String processedText = response;
     int index = 0;
-    
+
     for (final match in matches) {
       final fullMatch = match.group(0) ?? '';
       final type = match.group(1) ?? '';
       final id = match.group(2) ?? '';
       final title = match.group(3) ?? '';
-      
+
       // Create a reference object
       references.add(ItemReference(
         id: id,
@@ -302,17 +304,15 @@ class HomeController extends ChangeNotifier {
         type: _getReferenceType(type),
         index: index++,
       ));
-      
+
       // Replace the reference in the text with a clickable marker
-      processedText = processedText.replaceFirst(
-        fullMatch, 
-        '[$title](#ref-$id)'
-      );
+      processedText =
+          processedText.replaceFirst(fullMatch, '[$title](#ref-$id)');
     }
-    
+
     parsedAnswer = processedText;
   }
-  
+
   // Helper method to convert string type to enum
   ReferenceType _getReferenceType(String type) {
     switch (type.toLowerCase()) {
@@ -326,15 +326,16 @@ class HomeController extends ChangeNotifier {
         return ReferenceType.note;
     }
   }
-  
+
   // Method to find an item by ID
   ItemModel? findItemById(String id) {
     return items.firstWhere(
       (item) => item.id == id,
-      orElse: () => null as ItemModel, // This will throw, but we handle it in the UI
+      orElse: () =>
+          null as ItemModel, // This will throw, but we handle it in the UI
     );
   }
-  
+
   Future<void> initializeTheme() async {
     await _loadThemePreference();
   }

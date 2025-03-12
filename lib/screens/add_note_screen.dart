@@ -28,6 +28,9 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   final TextEditingController descriptionController = TextEditingController();
   bool _obscureContent = false;
   bool _isSaving = false;
+  bool _accountNameError = false;
+  bool _usernameError = false;
+  bool _passwordError = false;
 
   @override
   void initState() {
@@ -54,12 +57,24 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   }
 
   Future<void> _saveNote() async {
-    if (titleController.text.trim().isEmpty &&
-        contentController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter title or content')),
-      );
-      return;
+    if (widget.isPasswordNote) {
+      setState(() {
+        _accountNameError = titleController.text.trim().isEmpty;
+        _usernameError = usernameController.text.trim().isEmpty;
+        _passwordError = contentController.text.trim().isEmpty;
+      });
+
+      if (_accountNameError || _usernameError || _passwordError) {
+        return;
+      }
+    } else {
+      if (titleController.text.trim().isEmpty &&
+          contentController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter title or content')),
+        );
+        return;
+      }
     }
 
     setState(() => _isSaving = true);
@@ -127,126 +142,219 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.grey),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          widget.isPasswordNote ? 'Password Note' : 'Note',
-          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-        ),
-        actions: [
-          if (widget.isPasswordNote)
-            IconButton(
-              icon: Icon(
-                _obscureContent ? Icons.visibility_off : Icons.visibility,
-                color: Colors.blue,
-              ),
-              onPressed: () =>
-                  setState(() => _obscureContent = !_obscureContent),
-            ),
-          if (widget.note != null)
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => DeleteConfirmationDialog(
-                    title: 'Delete Note',
-                    message: 'Are you sure you want to delete this note?',
-                    onDelete: _deleteNote,
+    return Container(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.isPasswordNote ? 'Password Note' : 'Note',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
                   ),
-                );
-              },
+                ),
+                if (widget.isPasswordNote)
+                  IconButton(
+                    icon: Icon(
+                      _obscureContent ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.blue,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscureContent = !_obscureContent),
+                  ),
+                if (widget.note != null)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => DeleteConfirmationDialog(
+                          title: 'Delete Note',
+                          message: 'Are you sure you want to delete this note?',
+                          onDelete: _deleteNote,
+                        ),
+                      );
+                    },
+                  ),
+              ],
             ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: TextField(
+                      controller: titleController,
+                      maxLength: 100,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        hintText: widget.isPasswordNote
+                            ? '🔑 Account Name'
+                            : '✏️ Title',
+                        errorText: widget.isPasswordNote && _accountNameError
+                            ? 'Account name is required'
+                            : null,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        counterText: '',
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        contentPadding: const EdgeInsets.all(16),
+                        hintStyle: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withOpacity(0.7),
+                          fontSize: 20,
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      onChanged: (value) {
+                        if (_accountNameError)
+                          setState(() => _accountNameError = false);
+                      },
+                    ),
+                  ),
+                  if (widget.isPasswordNote)
+                    TextField(
+                      controller: usernameController,
+                      decoration: InputDecoration(
+                        hintText: '👤 Username',
+                        errorText:
+                            _usernameError ? 'Username is required' : null,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        hintStyle: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withOpacity(0.7),
+                          fontSize: 16,
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: 16,
+                        height: 1.5,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      onChanged: (value) {
+                        if (_usernameError)
+                          setState(() => _usernameError = false);
+                      },
+                    ),
+                  const Divider(height: 1),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: widget.isPasswordNote
+                        ? TextField(
+                            controller: contentController,
+                            maxLines: 1,
+                            obscureText: _obscureContent,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              hintText: 'Enter password',
+                              errorText: widget.isPasswordNote && _passwordError
+                                  ? 'Password is required'
+                                  : null,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              contentPadding: const EdgeInsets.all(16),
+                              hintStyle: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withOpacity(0.7),
+                                fontSize: 16,
+                              ),
+                            ),
+                            style: TextStyle(
+                              fontSize: 16,
+                              height: 1.5,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            onChanged: (value) {
+                              if (_passwordError)
+                                setState(() => _passwordError = false);
+                            },
+                          )
+                        : TextFormField(
+                            controller: contentController,
+                            maxLines: null,
+                            minLines: 100,
+                            keyboardType: TextInputType.multiline,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              hintText: 'Start writing your thoughts here...',
+                              errorText: widget.isPasswordNote && _passwordError
+                                  ? 'Password is required'
+                                  : null,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: true,
+                              fillColor: Colors.transparent,
+                              contentPadding: const EdgeInsets.all(16),
+                              hintStyle: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withOpacity(0.7),
+                                fontSize: 16,
+                              ),
+                            ),
+                            style: TextStyle(
+                              fontSize: 16,
+                              height: 1.5,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            onChanged: (value) {
+                              if (_passwordError)
+                                setState(() => _passwordError = false);
+                            },
+                          ),
+                  ),
+                  if (widget.isPasswordNote) const Divider(height: 1),
+                  if (widget.isPasswordNote)
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: TextField(
-                        controller: titleController,
-                        maxLength: 100,
+                      child: TextFormField(
+                        controller: descriptionController,
                         textCapitalization: TextCapitalization.sentences,
+                        minLines: 100,
+                        maxLines: null,
                         decoration: InputDecoration(
-                          hintText: widget.isPasswordNote
-                              ? '🔑 Account Name'
-                              : '✏️ Title',
+                          hintText: '📝 Add a brief description...',
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
                           counterText: '',
-                          filled: true,
-                          fillColor: Colors.transparent,
-                          contentPadding: const EdgeInsets.all(16),
-                          hintStyle: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant
-                                .withOpacity(0.7),
-                            fontSize: 20,
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    if (widget.isPasswordNote)
-                      TextField(
-                        controller: usernameController,
-                        decoration: InputDecoration(
-                          hintText: '👤 Username',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: true,
-                          fillColor: Colors.transparent,
-                          hintStyle: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant
-                                .withOpacity(0.7),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    const Divider(height: 1),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: TextField(
-                        controller: contentController,
-                        maxLines: widget.isPasswordNote ? 1 : null,
-                        obscureText: _obscureContent,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: InputDecoration(
-                          hintText: widget.isPasswordNote
-                              ? 'Enter password'
-                              : 'Start writing your thoughts here...',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
                           filled: true,
                           fillColor: Colors.transparent,
                           contentPadding: const EdgeInsets.all(16),
@@ -260,90 +368,53 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                         ),
                         style: TextStyle(
                           fontSize: 16,
-                          height: 1.5,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
-                    if (widget.isPasswordNote) const Divider(height: 1),
-                    if (widget.isPasswordNote)
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: TextField(
-                          controller: descriptionController,
-                          maxLength: 200,
-                          textCapitalization: TextCapitalization.sentences,
-                          decoration: InputDecoration(
-                            hintText: '📝 Add a brief description...',
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            counterText: '',
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            contentPadding: const EdgeInsets.all(16),
-                            hintStyle: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant
-                                  .withOpacity(0.7),
-                              fontSize: 16,
-                            ),
-                          ),
-                          style: TextStyle(
-                            fontSize: 16,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                  ],
+                ],
+              ),
+            ),
+          ),
+          // Save and Cancel buttons
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      Theme.of(context).colorScheme.surface.withOpacity(0.05),
+                  offset: const Offset(0, -2),
+                  blurRadius: 10,
                 ),
-              ),
+              ],
             ),
-            // Save and Cancel buttons
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        Theme.of(context).colorScheme.surface.withOpacity(0.05),
-                    offset: const Offset(0, -2),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: _isSaving ? null : () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: _isSaving ? null : _saveNote,
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Text(widget.note != null ? 'Update' : 'Save'),
-                  ),
-                ],
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: _isSaving ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: _isSaving ? null : _saveNote,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(widget.note != null ? 'Update' : 'Save'),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
