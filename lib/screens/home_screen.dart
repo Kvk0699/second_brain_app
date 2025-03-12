@@ -997,6 +997,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _showEventBottomSheet(context);
         break;
       case AddOption.document:
+        _showDocumentBottomSheet();
         break;
     }
   }
