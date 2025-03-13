@@ -372,28 +372,21 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(
         shrinkWrap: true,
         children: [
-          if (controller.passwordsList.isNotEmpty)
-            _buildPasswordSection(controller),
-          if (controller.eventsList.isNotEmpty ||
-              controller.documentsList.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  if (controller.eventsList.isNotEmpty)
-                    Expanded(
-                      child: _buildEventsSection(controller),
-                    ),
-                  if (controller.eventsList.isNotEmpty &&
-                      controller.documentsList.isNotEmpty)
-                    const SizedBox(width: 8),
-                  if (controller.documentsList.isNotEmpty)
-                    Expanded(
-                      child: _buildDocumentsSection(controller),
-                    ),
-                ],
-              ),
+          _buildPasswordSection(controller),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildEventsSection(controller),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildDocumentsSection(controller),
+                ),
+              ],
             ),
+          ),
           if (controller.notesList.isNotEmpty) _buildNotesSection(controller),
         ],
       ),
