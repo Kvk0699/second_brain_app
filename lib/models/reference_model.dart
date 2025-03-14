@@ -1,4 +1,4 @@
-enum ReferenceType { note, password, event }
+enum ReferenceType { note, password, event, document }
 
 class ItemReference {
   final String id;

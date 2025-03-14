@@ -1,10 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/item_model.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:uuid/uuid.dart';
 
 class StorageService {
   static const String _storageKey = 'items';
+  final Uuid _uuid = const Uuid();
 
   // Create storage instance with iOS and Android options
   final _storage = const FlutterSecureStorage(
@@ -100,5 +105,60 @@ class StorageService {
   // Clear all data (useful for logout)
   Future<void> clearAllData() async {
     await _storage.delete(key: _storageKey);
+  }
+
+  // Method to save a document file
+  Future<DocumentModel> saveDocument(
+    File file,
+    String title, {
+    String? description,
+    String? id,
+  }) async {
+    try {
+      final String uniqueId = id ?? const Uuid().v4();
+      final String fileExtension = p.extension(file.path);
+      final String fileName = '$uniqueId$fileExtension';
+      final Directory appDir = await getApplicationDocumentsDirectory();
+      final String savePath = p.join(appDir.path, fileName);
+
+      // Copy file to app directory
+      await file.copy(savePath);
+
+      final document = DocumentModel(
+        id: uniqueId,
+        title: title,
+        filePath: savePath,
+        fileExtension: fileExtension,
+        fileSize: await file.length(),
+        description: description,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await addItem(document);
+      return document;
+    } catch (e) {
+      debugPrint('Error saving document: $e');
+      rethrow;
+    }
+  }
+
+  // Method to delete a document
+  Future<bool> deleteDocument(DocumentModel document) async {
+    try {
+      // Delete the file
+      if (document.filePath != null) {
+        final file = File(document.filePath!);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+
+      // Delete the document from storage
+      return await deleteItem(document.id);
+    } catch (e) {
+      debugPrint('Error deleting document: $e');
+      return false;
+    }
   }
 }
