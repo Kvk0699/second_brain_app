@@ -17,7 +17,6 @@ import 'item_list_screen.dart';
 import '../controllers/home_controller.dart';
 import '../models/reference_model.dart';
 import '../screens/add_document_screen.dart';
-import '../widgets/document_display_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -435,6 +434,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 _handleDocumentAction(item);
               }
             },
+            onAddItem: () {
+              _showDocumentBottomSheet();
+            },
           ),
         ),
       ).then((value) {
@@ -531,6 +533,9 @@ class _HomeScreenState extends State<HomeScreen> {
               if (note is EventModel) {
                 _showEventBottomSheet(context, eventNote: note);
               }
+            },
+            onAddItem: () {
+              _showEventBottomSheet(context);
             },
           ),
         ),
@@ -797,6 +802,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (document is DocumentModel) {
                     _handleDocumentAction(document);
                   }
+                },
+                onAddItem: () {
+                  _showDocumentBottomSheet();
                 },
               ),
             ),
@@ -1086,6 +1094,9 @@ class _HomeScreenState extends State<HomeScreen> {
             if (note is PasswordModel) {
               _showPasswordBottomSheet(passwordNote: note);
             }
+          },
+          onAddItem: () {
+            _showPasswordBottomSheet();
           },
         ),
       ),

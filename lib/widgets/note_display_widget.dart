@@ -51,14 +51,16 @@ class NoteDisplayWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  item.title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
