@@ -79,6 +79,7 @@ class DocumentDisplayWidget extends StatelessWidget {
       onTap: () => onItemTap(item),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.7,
+        height: MediaQuery.of(context).size.height * 0.18,
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

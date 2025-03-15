@@ -28,13 +28,22 @@ class _ItemListScreenState extends State<ItemListScreen> {
   @override
   void initState() {
     super.initState();
-    _filteredItems = widget.items;
+    _updateFilteredItems();
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void didUpdateWidget(ItemListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update filtered items when widget.items changes
+    if (oldWidget.items != widget.items) {
+      _updateFilteredItems();
+    }
+  }
+
+  void _updateFilteredItems() {
+    setState(() {
+      _filteredItems = List.from(widget.items);
+    });
   }
 
   void _filterItems(String query) {
@@ -100,7 +109,6 @@ class _ItemListScreenState extends State<ItemListScreen> {
               },
             ),
         ],
-        elevation: 0,
       ),
       body: _filteredItems.isEmpty
           ? Center(
@@ -122,9 +130,20 @@ class _ItemListScreenState extends State<ItemListScreen> {
               },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: widget.onAddItem,
+        onPressed: () async {
+          final result = await widget.onAddItem();
+          if (result == true) {
+            _updateFilteredItems();
+          }
+        },
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }
