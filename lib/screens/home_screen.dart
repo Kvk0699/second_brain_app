@@ -17,6 +17,7 @@ import 'item_list_screen.dart';
 import '../controllers/home_controller.dart';
 import '../models/reference_model.dart';
 import '../screens/add_document_screen.dart';
+import '../screens/pro_features_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -182,6 +183,29 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           onTap: controller.toggleTheme,
+        ),
+        PopupMenuItem(
+          child: Row(
+            children: [
+              Icon(
+                Icons.star_outline,
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Pro Features',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.tertiary,
+                    ),
+              ),
+            ],
+          ),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ProFeaturesScreen(),
+            ),
+          ),
         ),
       ],
     );
