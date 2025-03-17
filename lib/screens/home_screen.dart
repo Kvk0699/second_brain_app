@@ -10,6 +10,7 @@ import 'dart:io' show Platform;
 
 import '../utils/enums.dart';
 import '../widgets/note_display_widget.dart';
+import 'about_us_screen.dart';
 import 'add_note_screen.dart';
 import '../widgets/add_event_widget.dart';
 import '../models/item_model.dart';
@@ -167,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       items: [
         PopupMenuItem(
+          onTap: controller.toggleTheme,
           child: Row(
             children: [
               Icon(
@@ -182,7 +184,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          onTap: controller.toggleTheme,
+        ),
+        PopupMenuItem(
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'About us',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ],
+          ),
+          onTap: () => _showAboutUsMenu(context),
         ),
         PopupMenuItem(
           child: Row(
@@ -208,6 +225,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showAboutUsMenu(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AboutUsScreen()),
     );
   }
 
@@ -393,19 +417,25 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildListsSection(HomeController controller) {
     return Expanded(
       child: ListView(
-        shrinkWrap: true,
         children: [
           _buildPasswordSection(controller),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: _buildEventsSection(controller),
+                  child: GestureDetector(
+                    onTap: () => _navigateToEventsList(context, controller),
+                    child: _buildEventsSection(controller),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildDocumentsSection(controller),
+                  child: GestureDetector(
+                    onTap: () => _navigateToDocumentsList(context, controller),
+                    child: _buildDocumentsSection(controller),
+                  ),
                 ),
               ],
             ),
@@ -458,8 +488,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 _handleDocumentAction(item);
               }
             },
-            onAddItem: () {
+            onAddItem: () async {
               _showDocumentBottomSheet();
+              return true;
             },
           ),
         ),
@@ -558,8 +589,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 _showEventBottomSheet(context, eventNote: note);
               }
             },
-            onAddItem: () {
+            onAddItem: () async {
               _showEventBottomSheet(context);
+              return true;
             },
           ),
         ),
@@ -827,8 +859,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     _handleDocumentAction(document);
                   }
                 },
-                onAddItem: () {
+                onAddItem: () async {
                   _showDocumentBottomSheet();
+                  return true;
                 },
               ),
             ),
@@ -1119,8 +1152,24 @@ class _HomeScreenState extends State<HomeScreen> {
               _showPasswordBottomSheet(passwordNote: note);
             }
           },
-          onAddItem: () {
-            _showPasswordBottomSheet();
+          onAddItem: () async {
+            bool? result = await showModalBottomSheet<bool>(
+              context: context,
+              isScrollControlled: true,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              builder: (context) => SizedBox(
+                height: MediaQuery.of(context).size.height * 0.8,
+                child: const AddNoteScreen(isPasswordNote: true),
+              ),
+            );
+
+            if (result == true && context.mounted) {
+              await context.read<HomeController>().loadNotes();
+              return true;
+            }
+            return false;
           },
         ),
       ),
@@ -1197,5 +1246,100 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     });
+  }
+
+  void _navigateToDocumentsList(
+      BuildContext context, HomeController controller) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ItemListScreen(
+          title: 'Documents',
+          items: controller.documentsList,
+          onItemTap: (item) {
+            if (item is DocumentModel) {
+              _showDocumentBottomSheet(document: item);
+            }
+          },
+          onAddItem: () async {
+            bool? result = await showModalBottomSheet<bool>(
+              context: context,
+              isScrollControlled: true,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              builder: (context) => SizedBox(
+                height: MediaQuery.of(context).size.height * 0.8,
+                child: const AddDocumentScreen(),
+              ),
+            );
+
+            if (result == true && context.mounted) {
+              await context.read<HomeController>().loadNotes();
+              return true;
+            }
+            return false;
+          },
+        ),
+      ),
+    );
+  }
+
+  void _navigateToEventsList(BuildContext context, HomeController controller) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ItemListScreen(
+          title: 'Events',
+          items: controller.eventsList,
+          onItemTap: (item) {
+            if (item is EventModel) {
+              _showEventBottomSheet(context, eventNote: item);
+            }
+          },
+          onAddItem: () async {
+            Map<String, dynamic>? result =
+                await showModalBottomSheet<Map<String, dynamic>>(
+              context: context,
+              isScrollControlled: true,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              builder: (context) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: const AddEventWidget(),
+              ),
+            );
+
+            if (result != null && context.mounted) {
+              if (result['delete'] == true && result['id'] != null) {
+                await context.read<HomeController>().deleteItem(result['id']);
+              } else {
+                final now = DateTime.now();
+                final event = EventModel(
+                  id: result['id'] ?? now.millisecondsSinceEpoch.toString(),
+                  title: result['title'],
+                  description: result['description'] ?? '',
+                  eventDateTime: DateTime.parse(result['datetime']),
+                  createdAt: DateTime.now(),
+                  updatedAt: now,
+                );
+
+                if (result['id'] != null) {
+                  await context.read<HomeController>().updateItem(event);
+                } else {
+                  await context.read<HomeController>().addItem(event);
+                }
+              }
+              await context.read<HomeController>().loadNotes();
+              return true;
+            }
+            return false;
+          },
+        ),
+      ),
+    );
   }
 }
