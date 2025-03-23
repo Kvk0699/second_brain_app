@@ -1061,15 +1061,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showDocumentBottomSheet({DocumentModel? document}) {
-    showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.8,
-        child: AddDocumentScreen(document: document),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddDocumentScreen(document: document),
       ),
     ).then((result) {
       if (result == true && mounted) {
@@ -1085,7 +1080,10 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => SizedBox(
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         height: MediaQuery.of(context).size.height * 0.8,
         child: AddNoteScreen(
           note: passwordNote,
@@ -1183,7 +1181,10 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => SizedBox(
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         height: MediaQuery.of(context).size.height * 0.8,
         child: AddNoteScreen(
           note: note,
