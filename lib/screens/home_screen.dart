@@ -1,4 +1,5 @@
 import 'package:app_settings/app_settings.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/error_codes.dart' as local_auth_error;
@@ -440,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          if (controller.notesList.isNotEmpty) _buildNotesSection(controller),
+          _buildNotesSection(controller),
         ],
       ),
     );
@@ -557,21 +558,53 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
           ),
         ),
-        ListView.builder(
-          shrinkWrap: true,
-          itemCount: controller.notesList.length,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemBuilder: (context, index) {
-            return NoteDisplayWidget(
-              item: controller.notesList[index] as NoteModel,
-              onItemTap: (note) {
-                _handleNoteItemTap(
-                    note: controller.notesList[index] as NoteModel);
-              },
-            );
-          },
-        )
+        controller.notesList.isNotEmpty
+            ? ListView.builder(
+                shrinkWrap: true,
+                itemCount: controller.notesList.length,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemBuilder: (context, index) {
+                  return NoteDisplayWidget(
+                    item: controller.notesList[index] as NoteModel,
+                    onItemTap: (note) {
+                      _handleNoteItemTap(
+                          note: controller.notesList[index] as NoteModel);
+                    },
+                  );
+                },
+              )
+            : Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Center(
+                  child: RichText(
+                    text: TextSpan(
+                      style: DefaultTextStyle.of(context).style,
+                      children: <TextSpan>[
+                        TextSpan(
+                            text: "Click here",
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _handleNoteItemTap(),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                )),
+                        TextSpan(
+                            text: " to add a note",
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                )),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
       ],
     );
   }
@@ -1080,6 +1113,7 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      isDismissible: false,
       builder: (context) => Container(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1154,6 +1188,7 @@ class _HomeScreenState extends State<HomeScreen> {
             bool? result = await showModalBottomSheet<bool>(
               context: context,
               isScrollControlled: true,
+              isDismissible: false,
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
@@ -1181,6 +1216,7 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      isDismissible: false,
       builder: (context) => Container(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1204,6 +1240,7 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      isDismissible: false,
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1266,6 +1303,7 @@ class _HomeScreenState extends State<HomeScreen> {
             bool? result = await showModalBottomSheet<bool>(
               context: context,
               isScrollControlled: true,
+              isDismissible: false,
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
@@ -1303,6 +1341,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 await showModalBottomSheet<Map<String, dynamic>>(
               context: context,
               isScrollControlled: true,
+              isDismissible: false,
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
