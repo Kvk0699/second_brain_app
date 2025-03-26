@@ -379,61 +379,61 @@ class HomeController extends ChangeNotifier {
 
   Future<void> _initializeDummyData() async {
     // Create dummy items
-    final dummyItems = [
-      // Two Note Models
-      NoteModel(
-        id: '1',
-        title: 'Meeting Notes',
-        content: 'Discuss project timeline and resource allocation for Q2.',
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-        description: '',
-      ),
-      NoteModel(
-        id: '2',
-        title: 'Shopping List',
-        content: 'Milk, eggs, bread, fruits, vegetables, and coffee beans.',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        updatedAt: DateTime.now(),
-        description: '',
-      ),
+    // final dummyItems = [
+    //   // Two Note Models
+    //   NoteModel(
+    //     id: '1',
+    //     title: 'Meeting Notes',
+    //     content: 'Discuss project timeline and resource allocation for Q2.',
+    //     createdAt: DateTime.now().subtract(const Duration(days: 5)),
+    //     updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+    //     description: '',
+    //   ),
+    //   NoteModel(
+    //     id: '2',
+    //     title: 'Shopping List',
+    //     content: 'Milk, eggs, bread, fruits, vegetables, and coffee beans.',
+    //     createdAt: DateTime.now().subtract(const Duration(days: 3)),
+    //     updatedAt: DateTime.now(),
+    //     description: '',
+    //   ),
 
-      // Two Password Models
-      PasswordModel(
-        id: '3',
-        accountName: 'Gmail Account',
-        username: 'user@gmail.com',
-        password: 'securePass2024!',
-        createdAt: DateTime.now().subtract(const Duration(days: 30)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 15)),
-      ),
-      PasswordModel(
-        id: '4',
-        accountName: 'Netflix',
-        username: 'user.netflix',
-        password: 'streamingPass#123',
-        createdAt: DateTime.now().subtract(const Duration(days: 60)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 10)),
-      ),
+    //   // Two Password Models
+    //   PasswordModel(
+    //     id: '3',
+    //     accountName: 'Gmail Account',
+    //     username: 'user@gmail.com',
+    //     password: 'securePass2024!',
+    //     createdAt: DateTime.now().subtract(const Duration(days: 30)),
+    //     updatedAt: DateTime.now().subtract(const Duration(days: 15)),
+    //   ),
+    //   PasswordModel(
+    //     id: '4',
+    //     accountName: 'Netflix',
+    //     username: 'user.netflix',
+    //     password: 'streamingPass#123',
+    //     createdAt: DateTime.now().subtract(const Duration(days: 60)),
+    //     updatedAt: DateTime.now().subtract(const Duration(days: 10)),
+    //   ),
 
-      // Two Event Models
-      EventModel(
-        id: '5',
-        title: 'Team Meeting',
-        description: 'Quarterly review with the development team.',
-        eventDateTime: DateTime.now().add(const Duration(days: 3)),
-        createdAt: DateTime.now().subtract(const Duration(days: 14)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      EventModel(
-        id: '6',
-        title: 'Dentist Appointment',
-        description: 'Regular check-up at Downtown Dental Clinic.',
-        eventDateTime: DateTime.now().add(const Duration(days: 7)),
-        createdAt: DateTime.now().subtract(const Duration(days: 10)),
-        updatedAt: DateTime.now(),
-      ),
-    ];
+    //   // Two Event Models
+    //   EventModel(
+    //     id: '5',
+    //     title: 'Team Meeting',
+    //     description: 'Quarterly review with the development team.',
+    //     eventDateTime: DateTime.now().add(const Duration(days: 3)),
+    //     createdAt: DateTime.now().subtract(const Duration(days: 14)),
+    //     updatedAt: DateTime.now().subtract(const Duration(days: 2)),
+    //   ),
+    //   EventModel(
+    //     id: '6',
+    //     title: 'Dentist Appointment',
+    //     description: 'Regular check-up at Downtown Dental Clinic.',
+    //     eventDateTime: DateTime.now().add(const Duration(days: 7)),
+    //     createdAt: DateTime.now().subtract(const Duration(days: 10)),
+    //     updatedAt: DateTime.now(),
+    //   ),
+    // ];
 
     // Check if any items already exist
     final existingItems = await _storage.getAllItems();
@@ -441,9 +441,9 @@ class HomeController extends ChangeNotifier {
     // Only initialize with dummy data if the storage is empty
     if (existingItems.isEmpty) {
       // Add each item to storage
-      for (final item in dummyItems) {
-        await _storage.addItem(item);
-      }
+      // for (final item in dummyItems) {
+      //   await _storage.addItem(item);
+      // }
 
       // Load the items from storage
       await loadNotes();
